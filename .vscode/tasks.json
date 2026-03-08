@@ -4,6 +4,39 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "web: build:watch",
+			"type": "shell",
+			"command": "yarn",
+			"args": ["run", "build:watch"],
+			"options": {
+				"cwd": "${workspaceFolder}/web",
+				"env": {}
+			},
+			"isBackground": true,
+			"problemMatcher": {
+				"owner": "vite",
+				"pattern": { "regexp": "built in ([\\d.]+)(ms|s)" },
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": ".",
+					"endsPattern": "built in [\\d.]+(?:ms|s)"
+				}
+			},
+			"presentation": {
+				"reveal": "silent",
+				"panel": "shared",
+				"group": "watch"
+			}
+		},
+		{
+            "label": "prepareExtension",
+            "dependsOn": [
+                "web: build:watch",
+                "watch"
+            ],
+            "problemMatcher": []
+        },
+		{
             "label": "watch",
             "dependsOn": [
                 "npm: watch:tsc",

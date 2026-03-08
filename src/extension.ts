@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as odbc from 'odbc';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -30,6 +31,21 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     context.subscriptions.push(webview);
+
+    let disposable = vscode.commands.registerCommand('sql-anywhere-17-database-tools.helloWorld', () => {
+      vscode.window.showInformationMessage('Hello World!');
+
+      // const odbc = require('node-odbc');
+      const connectionString = 'DSN=MySQL;';
+        const connection = odbc.connect(connectionString, (error, connection) => {
+            connection.query('SELECT * FROM Persons;', (error, result) => {
+                if (error) { console.error(error) }
+                console.log(result);
+            });
+        });
+    });
+
+    context.subscriptions.push(disposable);
 }
 
 export function deactivate() { }
