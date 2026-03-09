@@ -35,17 +35,24 @@ export function activate(context: vscode.ExtensionContext) {
     let disposable = vscode.commands.registerCommand('sql-anywhere-17-database-tools.helloWorld', () => {
       vscode.window.showInformationMessage('Hello World!');
 
-      // const odbc = require('node-odbc');
       const connectionString = 'DSN=MySQL;';
         const connection = odbc.connect(connectionString, (error, connection) => {
             connection.query('SELECT * FROM Persons;', (error, result) => {
-                if (error) { console.error(error) }
+                if (error) { console.error(error); }
                 console.log(result);
             });
         });
     });
 
     context.subscriptions.push(disposable);
+
+    const editCommand = vscode.commands.registerCommand('sql-anywhere-17-database-tools.edit', () => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor) {
+        vscode.window.showInformationMessage('Edit SQL', editor.document.uri.fsPath);
+      }
+    });
+    context.subscriptions.push(editCommand);
 }
 
 export function deactivate() { }

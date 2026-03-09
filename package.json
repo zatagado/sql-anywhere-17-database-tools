@@ -20,8 +20,25 @@
       {
         "command": "sql-anywhere-17-database-tools.helloWorld",
         "title": "Hello World"
+      },
+      {
+        "command": "sql-anywhere-17-database-tools.edit",
+        "title": "Edit",
+        "icon": {
+          "light": "resources/light/edit.svg",
+          "dark": "resources/dark/edit.svg"
+        }
       }
-    ]
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "sql-anywhere-17-database-tools.edit",
+          "when": "editorLangId == sql",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "yarn run package",
