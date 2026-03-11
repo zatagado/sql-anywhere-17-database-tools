@@ -1,77 +1,5 @@
 import * as vscode from 'vscode';
 
-// const treeNodes: any = {
-//     type: 'database',
-//     label: (dataSourceName: string) => {
-//         return dataSourceName;
-//     },
-//     icon: () => {
-//         // TODO the function should return the icon of the database
-//         return 'database.svg';
-//     },
-//     children: [{
-//         type: 'tables',
-//         label: () => {
-//             return 'Tables';
-//         },
-//         icon: () => {
-//             // TODO the function should return the icon of the tables
-//             return 'tables.svg';
-//         },
-//         children: {
-//             type: 'table',
-//             label: (dataSourceName: string, parentItem: DatabaseItem) => {
-//                 // TODO
-//                 return 'table';
-//             },
-//             icon: () => {
-//                 return 'table.svg';
-//             },
-//             onClick: () => {
-//                 console.log('table clicked');
-//             }
-//         }
-//     }, {
-//         type: 'views',
-//         label: () => {
-//             return 'Views';
-//         },
-//         icon: () => {
-//             // TODO the function should return the icon of the views
-//             return 'views.svg';
-//         },
-//         children: {
-//             type: 'view',
-//             label: (dataSourceName: string, parentItem: DatabaseItem) => {
-//                 // TODO
-//                 return 'view';
-//             },
-//             onClick: () => {
-//                 console.log('view clicked');
-//             }
-//         }
-//     }, {
-//         type: 'procedures',
-//         label: () => {
-//             return 'Procedures';
-//         },
-//         icon: () => {
-//             // TODO the function should return the icon of the procedures
-//             return 'procedures.svg';
-//         },
-//         children: {
-//             type: 'procedure',
-//             label: (dataSourceName: string, parentItem: DatabaseItem) => {
-//                 // TODO
-//                 return 'procedure';
-//             },
-//             onClick: () => {
-//                 console.log('procedure clicked');
-//             }
-//         }
-//     }]
-// }
-
 export class DatabaseTree implements vscode.TreeDataProvider<DatabaseItem> {
     private databaseNodes: any[] = [];
 
@@ -143,7 +71,7 @@ export class DatabaseTree implements vscode.TreeDataProvider<DatabaseItem> {
         let previousTreeDatasources = this.context.globalState.get('databaseTreeDatasources') as string[];
         // TODO may want to serialize the state of the nodes to see if they are collapsed or expanded
         
-        previousTreeDatasources = ['SAMMDev'];
+        previousTreeDatasources = ['TF - SAMM 1'];
         return previousTreeDatasources.map(dataSourceName => 
             new DatabaseItem(
                 this.context.extensionUri,
@@ -164,7 +92,7 @@ export class DatabaseItem extends vscode.TreeItem {
         super(label, collapsibleState);
 
         this.tooltip = 'Tooltip';
-        this.description = 'Description';
+        this.description = 'SQL Anywhere 17';
 
         this.iconPath = {
             light: vscode.Uri.joinPath(extensionRoot, 'resources', 'light', 'dependency.svg'),
