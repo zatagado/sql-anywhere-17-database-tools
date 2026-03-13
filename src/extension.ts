@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as odbc from 'odbc';
 import { DatabaseTree } from './components/navigation/databaseTree';
+import { datasourceQuickPick } from './components/selection/datasourceQuickPick';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -62,17 +63,7 @@ export function activate(context: vscode.ExtensionContext) {
     const databaseTreeProvider = new DatabaseTree(context, rootPath);
     vscode.window.registerTreeDataProvider('databaseTree', databaseTreeProvider);
 
-
-
-    // TODO use datasourceQuickPick
-    vscode.commands.registerCommand('databaseTree.addDatasource', () => vscode.window.showQuickPick(['TF - SAMM 1', 'TF - SAMM 2'], {
-        title: 'Connect to Datasource',
-        prompt: 'Select a datasource to connect to...'
-
-    }).then(item => {
-        // TODO add datasource to save
-        debugger;
-    }));
+    vscode.commands.registerCommand('databaseTree.addDatasource', datasourceQuickPick);
 }
 
 export function deactivate() { }
