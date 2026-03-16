@@ -26,7 +26,7 @@ export async function datasourceQuickPick(context: ExtensionContext) {
     async function collectInputs() {
         const state = {} as Partial<State>;
         await DatasourceQuickPick.run(input => selectDatasource(input, state));
-        return ConnectionManager.getDataSource(state.dataSource!);
+        return state as State;
     }
 
     const title = 'Connect to Datasource';
@@ -48,7 +48,6 @@ export async function datasourceQuickPick(context: ExtensionContext) {
             state.dataSource = selection.label;
             return (input: DatasourceQuickPick) => selectDatasourceType(input, state);
         }
-        return (input: DatasourceQuickPick) => validateDatasource(input, state as State);
     }
 
     async function selectDatasourceType(input: DatasourceQuickPick, state: Partial<State>) {
@@ -58,27 +57,25 @@ export async function datasourceQuickPick(context: ExtensionContext) {
             items: dataSourceTypes
         });
         state.dataSourceType = selection.label;
-        return (input: DatasourceQuickPick) => validateDatasource(input, state as State);
     }
 
-    async function validateDatasource(input: DatasourceQuickPick, state: State) {
-        const dataSource = new DataSource(state.dataSource, state.dataSourceType);
-        // TODO might need a try catch here
-        const connection = await dataSource.getConnection();
-        if (connection) {
-            return () => ConnectionManager.saveDataSource(dataSource, context);
-        }
-        else {
-            return null;
+    async function validateDatasource(dataSource: DataSource) {
+        try {
+            await dataSource.getConnection();
+            return true;
+        } catch (error) {
+            return false;
         }
     }
 
-    const dataSource = await collectInputs();
-    if (dataSource) {
+    const state = await collectInputs();
+    const dataSource = new DataSource(state.dataSource, state.dataSourceType);
+    if (await validateDatasource(dataSource)) {
+        ConnectionManager.saveDataSource(dataSource, context);
         window.showInformationMessage(`Connected to ${dataSource.getName()}`);
     }
     else {
-        window.showErrorMessage('Failed to connect to datasource');
+        window.showErrorMessage(`Failed to connect to ${dataSource.getName()}`);
     }
 }
 

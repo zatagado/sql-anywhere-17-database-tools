@@ -40,19 +40,19 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(webview);
 
-    let disposable = vscode.commands.registerCommand('sql-anywhere-17-database-tools.helloWorld', () => {
-        vscode.window.showInformationMessage('Hello World!');
+    // let disposable = vscode.commands.registerCommand('sql-anywhere-17-database-tools.helloWorld', () => {
+    //     vscode.window.showInformationMessage('Hello World!');
 
-        const connectionString = 'DSN=MySQL;';
-        const connection = odbc.connect(connectionString, (error, connection) => {
-            connection.query('SELECT * FROM Persons;', (error, result) => {
-                if (error) { console.error(error); }
-                console.log(result);
-            });
-        });
-    });
+    //     const connectionString = 'DSN=MySQL;';
+    //     const connection = odbc.connect(connectionString, (error, connection) => {
+    //         connection.query('SELECT * FROM Persons;', (error, result) => {
+    //             if (error) { console.error(error); }
+    //             console.log(result);
+    //         });
+    //     });
+    // });
 
-    context.subscriptions.push(disposable);
+    // context.subscriptions.push(disposable);
 
     const editCommand = vscode.commands.registerCommand('sql-anywhere-17-database-tools.edit', () => {
         const editor = vscode.window.activeTextEditor;

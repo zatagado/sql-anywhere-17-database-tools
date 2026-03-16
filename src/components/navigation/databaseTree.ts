@@ -17,7 +17,7 @@ export class DatabaseTree implements vscode.TreeDataProvider<DatabaseItem> {
     }
 
     getChildren(element?: DatabaseItem): Thenable<DatabaseItem[]> {
-        // TODO list the connections from the previous session
+        // TODO list the connections from the previous session, within the workspace, not the global extension
 
         // getChildren: () => {
         //     return [{
