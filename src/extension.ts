@@ -1,9 +1,14 @@
 import * as vscode from 'vscode';
 import * as odbc from 'odbc';
+import { ConnectionManager } from './manager/connectionManager';
 import { DatabaseTree } from './components/navigation/databaseTree';
 import { datasourceQuickPick } from './components/selection/datasourceQuickPick';
+import { SqlManager } from './manager/sqlManager';
 
 export function activate(context: vscode.ExtensionContext) {
+
+    SqlManager.loadSqlLanguages(context);
+    ConnectionManager.loadDataSources(context);
 
     let webview = vscode.commands.registerCommand('sql-anywhere-17-database-tools.namasteworld', () => {
 
@@ -63,7 +68,7 @@ export function activate(context: vscode.ExtensionContext) {
     const databaseTreeProvider = new DatabaseTree(context, rootPath);
     vscode.window.registerTreeDataProvider('databaseTree', databaseTreeProvider);
 
-    vscode.commands.registerCommand('databaseTree.addDatasource', datasourceQuickPick);
+    vscode.commands.registerCommand('databaseTree.addDatasource', () => datasourceQuickPick(context));
 }
 
 export function deactivate() { }

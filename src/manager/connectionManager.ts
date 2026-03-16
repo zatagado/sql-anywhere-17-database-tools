@@ -1,46 +1,54 @@
 import * as odbc from 'odbc';
+import { ExtensionContext } from 'vscode';
 
 export class ConnectionManager {
-    private stack: DataSource[] = [];
 
-    private getDataSource(name: string, updateRecent: boolean = true): DataSource {
-        let dataSource = this.stack.find(dataSource => dataSource.getName() === name);
+    private static stack: DataSource[] = [];
 
-        if (dataSource) {
-            if (updateRecent) {
-                this.stack = this.stack.filter(dataSource => dataSource.getName() !== name);
-                this.stack.push(dataSource);
-                // Limit the stack to 6 items
-            }
-        } else {
-            try {
-                dataSource = new DataSource(name);
-                if (updateRecent) {
-                    this.stack.push(dataSource);
-                }
-            } catch (error) {
-                throw new Error(`Failed to create data source ${name}: ${error}`);
-            }
+    static loadDataSources(context: ExtensionContext): DataSource[] {
+        this.stack = (context.globalState.get('dataSources') as { name: string, type: string }[] ?? []).map(
+            dataSource => new DataSource(dataSource.name, dataSource.type));
+        return this.stack;
+    }
+
+    static saveDataSource(dataSource: DataSource, context: ExtensionContext) {
+        this.stack.push(dataSource);
+        context.globalState.update('dataSources', this.stack);
+    }
+
+    static getDataSources(): DataSource[] {
+        return this.stack;
+    }
+
+    static getDataSource(name: string): DataSource | undefined {
+        return this.stack.find(dataSource => dataSource.getName() === name);
+    }
+
+    private static updateRecentStack(dataSource: DataSource) {
+        if (this.stack.some(otherDataSource => otherDataSource.getName() === dataSource.getName())) {
+            this.stack = this.stack.filter(otherDataSource => otherDataSource.getName() !== dataSource.getName());
         }
-
-        return dataSource;
+        else {
+            throw new Error(`DataSource ${dataSource.getName()} not found in stack`);
+        }
     }
 
-    getDataSourceNames(): string[] {
-        return this.stack.map(dataSource => dataSource.getName());
-    }
-
-    execute(name: string, query: string, updateRecent: boolean = true): Promise<odbc.Result<unknown>> {
-        return this.getDataSource(name, updateRecent).getConnection().then(connection => connection.query(query));
+    static execute(dataSource: DataSource, query: string, updateRecent: boolean = true): Promise<odbc.Result<unknown>> {
+        if (updateRecent) {
+            this.updateRecentStack(dataSource);
+        }
+        return dataSource.getConnection().then(connection => connection.query(query));
     }
 }
 
 export class DataSource {
     private name: string;
+    private type: string;
     private pool!: odbc.Pool;
 
-    constructor(name: string) {
+    constructor(name: string, type: string) {
         this.name = name;
+        this.type = type;
     }
 
     private async getPool(): Promise<odbc.Pool> {
@@ -61,5 +69,9 @@ export class DataSource {
 
     getName() {
         return this.name;
+    }
+
+    getType() {
+        return this.type;
     }
 }
