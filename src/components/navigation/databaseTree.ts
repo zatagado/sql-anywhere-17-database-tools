@@ -42,7 +42,7 @@ export class DatabaseTree implements TreeDataProvider<DatabaseItem> {
     getChildren(node?: DatabaseItem): Thenable<DatabaseItem[]> {
         if (node) {
             if (node.getChildren) {
-                return Promise.resolve(node.getChildren(node));
+                return node.getChildren(node);
             }
             else {
                 return Promise.resolve([]);
@@ -53,39 +53,60 @@ export class DatabaseTree implements TreeDataProvider<DatabaseItem> {
         }
     }
 
-    private createTypesNodes(parentNode: DatabaseItem): DatabaseItem[] {
-        return [
+    private createTypesNodes(databaseNode: DatabaseItem): Promise<DatabaseItem[]> {
+        return Promise.resolve([
             new DatabaseItem(
-                parentNode.extensionRoot,
+                databaseNode.extensionRoot,
                 'Tables',
-                parentNode.dataSource,
+                databaseNode.dataSource,
                 TreeItemCollapsibleState.Collapsed,
                 undefined,
-                (parentNode: DatabaseItem): DatabaseItem[] => {
-                    return [];
+                async (typesNode: DatabaseItem): Promise<DatabaseItem[]> => {
+                    // const tables = await ConnectionManager.execute(typesNode.dataSource, 'SELECT TOP 50 * FROM sys.systable');
+                    ConnectionManager.execute(typesNode.dataSource, 'SELECT TOP 100 * FROM sys.systables').then(tables => {
+                        return tables.map(table => new DatabaseItem(
+                            databaseNode.extensionRoot,
+                            `${}.${table['table_name']}`,
+                            typesNode.dataSource,
+                            TreeItemCollapsibleState.None,
+                            undefined,
+                            undefined
+                        ));
+                    });
+                    return;
                 }
             ),
             new DatabaseItem(
-                parentNode.extensionRoot,
+                databaseNode.extensionRoot,
                 'Views',
-                parentNode.dataSource,
+                databaseNode.dataSource,
                 TreeItemCollapsibleState.Collapsed,
                 undefined,
-                (parentNode: DatabaseItem): DatabaseItem[] => {
+                async (typesNode: DatabaseItem): Promise<DatabaseItem[]> => {
+                    // ConnectionManager.execute(typesNode.dataSource, 'SELECT * FROM sys.views').then(views => {
+                    //     return views.map(view => new DatabaseItem(
+                    //         databaseNode.extensionRoot,
+                    //         view.getName(),
+                    //         view,
+                    //         TreeItemCollapsibleState.Collapsed,
+                    //         undefined,
+                    //         undefined
+                    //     ));
+                    // });
                     return [];
                 }
             ),
             new DatabaseItem(
-                parentNode.extensionRoot,
+                databaseNode.extensionRoot,
                 'Procedures',
-                parentNode.dataSource,
+                databaseNode.dataSource,
                 TreeItemCollapsibleState.Collapsed,
                 undefined,
-                (parentNode: DatabaseItem): DatabaseItem[] => {
+                async (typesNode: DatabaseItem): Promise<DatabaseItem[]> => {
                     return [];
                 }
             )
-        ];
+        ]);
     }
 
     addDatabase(dataSource: DataSource): void {
@@ -116,7 +137,7 @@ export class DatabaseItem extends TreeItem {
         public readonly dataSource: DataSource,
         public readonly collapsibleState: TreeItemCollapsibleState,
         public readonly command?: Command,
-        public readonly getChildren?: (parentNode: DatabaseItem) => DatabaseItem[]
+        public readonly getChildren?: (parentNode: DatabaseItem) => Promise<DatabaseItem[]>
     ) {
         super(label, collapsibleState);
 

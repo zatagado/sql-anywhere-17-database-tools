@@ -42,7 +42,18 @@ export class ConnectionManager {
         if (updateRecent) {
             this.updateRecentStack(dataSource);
         }
-        return dataSource.getConnection().then(connection => connection.query(query));
+        return dataSource.getConnection().then(connection =>
+            connection.query(query).then(
+                result => {
+                    connection.close();
+                    return result;
+                },
+                err => {
+                    connection.close();
+                    throw err;
+                }
+            )
+        );
     }
 }
 
