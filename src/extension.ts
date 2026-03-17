@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as odbc from 'odbc';
 import { ConnectionManager } from './manager/connectionManager';
-import { DatabaseTree } from './components/navigation/databaseTree';
+import { DatabaseItem, DatabaseTree } from './components/navigation/databaseTree';
 import { datasourceQuickPick } from './components/selection/datasourceQuickPick';
 import { SqlManager } from './manager/sqlManager';
 
@@ -63,12 +63,19 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(editCommand);
 
     // TODO start actual code
-    const rootPath = (vscode.workspace.workspaceFolders && (vscode.workspace.workspaceFolders.length > 0)
-        ? vscode.workspace.workspaceFolders[0].uri.fsPath : undefined);
-    const databaseTreeProvider = new DatabaseTree(context, rootPath);
+    const databaseTreeProvider = new DatabaseTree(context);
     vscode.window.registerTreeDataProvider('databaseTree', databaseTreeProvider);
 
-    vscode.commands.registerCommand('databaseTree.addDatasource', () => datasourceQuickPick(context));
+    // TODO the result of this gets added to the database tree
+    vscode.commands.registerCommand('databaseTree.addDatasource', () => datasourceQuickPick(context).then(
+        dataSource => {
+            if (dataSource) {
+                databaseTreeProvider.addDatabase(dataSource);
+            }
+        }));
+    vscode.commands.registerCommand('databaseTree.removeDatasource', (node: DatabaseItem) => 
+        databaseTreeProvider.removeDatabase(node));
+    vscode.commands.registerCommand('databaseTree.refresh', () => databaseTreeProvider.refresh());
 }
 
 export function deactivate() { }

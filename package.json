@@ -22,6 +22,18 @@
                 "title": "Add Datasource"
             },
             {
+                "command": "databaseTree.removeDatasource",
+                "title": "Remove Datasource"
+            },
+            {
+                "command": "databaseTree.refresh",
+                "title": "Refresh",
+                "icon": {
+                    "light": "resources/light/refresh.svg",
+                    "dark": "resources/dark/refresh.svg"
+                }
+            },
+            {
                 "command": "sql-anywhere-17-database-tools.edit",
                 "title": "Edit",
                 "icon": {
@@ -42,15 +54,17 @@
                 {
                     "command": "databaseTree.addDatasource",
                     "when": "view == databaseTree"
-                }
-            ]
-        },
-        "viewsContainers": {
-            "activitybar": [
+                },
                 {
-                    "id": "database-tools",
-                    "title": "Database Tools",
-                    "icon": "media/dep.svg"
+                    "command": "databaseTree.refresh",
+                    "when": "view == databaseTree",
+                    "group": "navigation"
+                }
+            ],
+            "view/item/context": [
+                {
+                    "command": "databaseTree.removeDatasource",
+                    "when": "view == databaseTree && viewItem == databaseItem"
                 }
             ]
         },
@@ -63,7 +77,22 @@
                     "contextualTitle": "Datasources"
                 }
             ]
-        }
+        },
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "database-tools",
+                    "title": "Database Tools",
+                    "icon": "media/dep.svg"
+                }
+            ]
+        },
+        "viewsWelcome": [
+            {
+                "view": "databaseTree",
+                "contents": "No datasources added. Add a datasource to get started."
+            }
+        ]
     },
     "scripts": {
         "vscode:prepublish": "yarn run package",

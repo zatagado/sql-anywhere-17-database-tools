@@ -69,13 +69,20 @@ export async function datasourceQuickPick(context: ExtensionContext) {
     }
 
     const state = await collectInputs();
-    const dataSource = new DataSource(state.dataSource, state.dataSourceType);
-    if (await validateDatasource(dataSource)) {
+    const dataSource = ConnectionManager.getDataSource(state.dataSource) ??
+        new DataSource(state.dataSource, state.dataSourceType);
+    if (dataSource.isConnected()) {
+        ConnectionManager.saveDataSource(dataSource, context);
+        return dataSource;
+    }
+    else if (await validateDatasource(dataSource)) {
         ConnectionManager.saveDataSource(dataSource, context);
         window.showInformationMessage(`Connected to ${dataSource.getName()}`);
+        return dataSource;
     }
     else {
         window.showErrorMessage(`Failed to connect to ${dataSource.getName()}`);
+        return null;
     }
 }
 

@@ -12,6 +12,10 @@ export class ConnectionManager {
     }
 
     static saveDataSource(dataSource: DataSource, context: ExtensionContext) {
+        if (this.stack.some(otherDataSource => 
+            otherDataSource.getName() === dataSource.getName() && otherDataSource.getType() === dataSource.getType())) {
+            this.stack = this.stack.filter(otherDataSource => otherDataSource.getName() !== dataSource.getName());
+        }
         this.stack.push(dataSource);
         context.globalState.update('dataSources', this.stack);
     }
@@ -25,7 +29,8 @@ export class ConnectionManager {
     }
 
     private static updateRecentStack(dataSource: DataSource) {
-        if (this.stack.some(otherDataSource => otherDataSource.getName() === dataSource.getName())) {
+        if (this.stack.some(otherDataSource => 
+            otherDataSource.getName() === dataSource.getName() && otherDataSource.getType() === dataSource.getType())) {
             this.stack = this.stack.filter(otherDataSource => otherDataSource.getName() !== dataSource.getName());
         }
         else {
@@ -61,6 +66,10 @@ export class DataSource {
                 return pool;
             });
         }
+    }
+
+    isConnected(): boolean {
+        return this.pool !== undefined;
     }
 
     getConnection(): Promise<odbc.Connection> {

@@ -1,102 +1,132 @@
-import * as vscode from 'vscode';
+import { ConnectionManager, DataSource } from '../../manager/connectionManager';
+import {
+    Command,
+    Event,
+    EventEmitter,
+    ExtensionContext,
+    TreeDataProvider,
+    TreeItem,
+    TreeItemCollapsibleState,
+    Uri,
+} from 'vscode';
 
-export class DatabaseTree implements vscode.TreeDataProvider<DatabaseItem> {
-    private databaseNodes: any[] = [];
+export class DatabaseTree implements TreeDataProvider<DatabaseItem> {
+    
+    private _onDidChangeTreeData: EventEmitter<DatabaseItem | undefined | void> = new EventEmitter<DatabaseItem | undefined | void>();
+    readonly onDidChangeTreeData: Event<DatabaseItem | undefined | void> = this._onDidChangeTreeData.event;
+
+    private databaseNodes: DatabaseItem[] = [];
 
     constructor(
-        private readonly context: vscode.ExtensionContext,
-        private readonly workspaceRoot: string | undefined,
-    ) { }
-
-    refresh(): void {
-
+        private readonly context: ExtensionContext
+    ) {
+        const previousTreeDatasources = this.context.workspaceState.get('databaseTreeDatabases') as string[] ?? [];
+        this.databaseNodes = previousTreeDatasources.map(dataSourceName => new DatabaseItem(
+            this.context.extensionUri,
+            dataSourceName,
+            ConnectionManager.getDataSource(dataSourceName)!,
+            TreeItemCollapsibleState.Collapsed,
+            undefined,
+            this.createTypesNodes
+        ));
     }
 
-    getTreeItem(element: DatabaseItem): vscode.TreeItem {
-        return element;
+    refresh(node?: DatabaseItem): void {
+        this._onDidChangeTreeData.fire(node);
     }
 
-    getChildren(element?: DatabaseItem): Thenable<DatabaseItem[]> {
-        // TODO list the connections from the previous session, within the workspace, not the global extension
+    getTreeItem(node: DatabaseItem): TreeItem {
+        return node;
+    }
 
-        // getChildren: () => {
-        //     return [{
-        //         type: 'tables',
-        //         label: () => {
-        //             return 'Tables';
-        //         },
-        //         icon: () => {
-        //             return 'tables.svg';
-        //         },
-        //         getChildren: () => {
-        //             return null;
-        //         }
-        //     }, {
-        //         type: 'views',
-        //         label: () => {
-        //             return 'Views';
-        //         },
-        //         icon: () => {
-        //             return 'views.svg';
-        //         },
-        //         getChildren: () => {
-        //             return null;
-        //         }
-        //     }, {
-        //         type: 'procedures',
-        //         label: () => {
-        //             return 'Procedures';
-        //         },
-        //         icon: () => {
-        //             return 'procedures.svg';
-        //         },
-        //         getChildren: () => {
-        //             return null;
-        //         }
-        //     }]
-        // }
-
-        // return Promise.resolve([]);
-        if (element) {
-            return Promise.resolve([]);
+    getChildren(node?: DatabaseItem): Thenable<DatabaseItem[]> {
+        if (node) {
+            if (node.getChildren) {
+                return Promise.resolve(node.getChildren(node));
+            }
+            else {
+                return Promise.resolve([]);
+            }
         }
         else {
-            // TODO
-            // const previousTreeDatasources = this.context.globalState.get('databaseTreeDatasources') as string[];
-            return Promise.resolve(this.getDatasourceNodes());
+            return Promise.resolve(this.databaseNodes);
         }
     }
 
-    private getDatasourceNodes(): any[] {
-        let previousTreeDatasources = this.context.globalState.get('databaseTreeDatasources') as string[];
-        // TODO may want to serialize the state of the nodes to see if they are collapsed or expanded
-        
-        previousTreeDatasources = ['TF - SAMM 1'];
-        return previousTreeDatasources.map(dataSourceName => 
+    private createTypesNodes(parentNode: DatabaseItem): DatabaseItem[] {
+        return [
             new DatabaseItem(
-                this.context.extensionUri,
-                dataSourceName,
-                vscode.TreeItemCollapsibleState.Collapsed
+                parentNode.extensionRoot,
+                'Tables',
+                parentNode.dataSource,
+                TreeItemCollapsibleState.Collapsed,
+                undefined,
+                (parentNode: DatabaseItem): DatabaseItem[] => {
+                    return [];
+                }
+            ),
+            new DatabaseItem(
+                parentNode.extensionRoot,
+                'Views',
+                parentNode.dataSource,
+                TreeItemCollapsibleState.Collapsed,
+                undefined,
+                (parentNode: DatabaseItem): DatabaseItem[] => {
+                    return [];
+                }
+            ),
+            new DatabaseItem(
+                parentNode.extensionRoot,
+                'Procedures',
+                parentNode.dataSource,
+                TreeItemCollapsibleState.Collapsed,
+                undefined,
+                (parentNode: DatabaseItem): DatabaseItem[] => {
+                    return [];
+                }
             )
-        );
+        ];
+    }
+
+    addDatabase(dataSource: DataSource): void {
+        this.databaseNodes.push(new DatabaseItem(
+            this.context.extensionUri,
+            dataSource.getName(),
+            dataSource,
+            TreeItemCollapsibleState.Collapsed,
+            undefined,
+            this.createTypesNodes
+        ));
+        this.refresh();
+        this.context.workspaceState.update('databaseTreeDatabases', this.databaseNodes.map(database => database.label));
+    }
+
+    removeDatabase(node: DatabaseItem): void {
+        this.databaseNodes = this.databaseNodes.filter(databaseNode => databaseNode !== node);
+        this.refresh();
+        this.context.workspaceState.update('databaseTreeDatabases', this.databaseNodes.map(database => database.label));
     }
 }
 
-export class DatabaseItem extends vscode.TreeItem {
+export class DatabaseItem extends TreeItem {
+
     constructor(
-        extensionRoot: vscode.Uri,
+        public readonly extensionRoot: Uri,
         public readonly label: string,
-        public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-        public readonly command?: vscode.Command
+        public readonly dataSource: DataSource,
+        public readonly collapsibleState: TreeItemCollapsibleState,
+        public readonly command?: Command,
+        public readonly getChildren?: (parentNode: DatabaseItem) => DatabaseItem[]
     ) {
         super(label, collapsibleState);
 
-        this.tooltip = 'Tooltip';
-        this.description = 'SQL Anywhere 17';
+        this.dataSource = dataSource;
 
         this.iconPath = {
-            light: vscode.Uri.joinPath(extensionRoot, 'resources', 'light', 'dependency.svg'),
-            dark: vscode.Uri.joinPath(extensionRoot, 'resources', 'dark', 'dependency.svg'),
+            light: Uri.joinPath(extensionRoot, 'resources', 'light', 'dependency.svg'),
+            dark: Uri.joinPath(extensionRoot, 'resources', 'dark', 'dependency.svg'),
         };
     }
+
+    contextValue = 'databaseItem';
 }
