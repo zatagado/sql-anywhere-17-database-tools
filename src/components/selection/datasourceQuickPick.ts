@@ -72,11 +72,11 @@ export async function datasourceQuickPick(context: ExtensionContext) {
     const dataSource = ConnectionManager.getDataSource(state.dataSource) ??
         new DataSource(state.dataSource, state.dataSourceType);
     if (dataSource.isConnected()) {
-        ConnectionManager.saveDataSource(dataSource, context);
+        ConnectionManager.saveDataSource(dataSource);
         return dataSource;
     }
     else if (await validateDatasource(dataSource)) {
-        ConnectionManager.saveDataSource(dataSource, context);
+        ConnectionManager.saveDataSource(dataSource);
         window.showInformationMessage(`Connected to ${dataSource.getName()}`);
         return dataSource;
     }

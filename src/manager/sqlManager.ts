@@ -4,16 +4,25 @@ import {
     workspace
 } from "vscode";
 
-interface Sql {
+export interface Sql {
     name: string;
+    navigation?: {
+        databaseTree?: {
+            tables?: string;
+            views?: string;
+            procedures?: string;
+        };
+    };
 }
 
 export class SqlManager {
 
+    private static context: ExtensionContext;
     private static sqlFiles: Map<string, Sql> = new Map();
 
-    static async loadSqlLanguages(content: ExtensionContext) {
-        const sqlFolderUri = Uri.joinPath(content.extensionUri, 'src', 'sql');
+    static async load(context: ExtensionContext) {
+        this.context = context;
+        const sqlFolderUri = Uri.joinPath(this.context.extensionUri, 'src', 'sql');
         const sqlFileUris = await workspace.fs.readDirectory(sqlFolderUri).then(files => 
             files.map(file => Uri.joinPath(sqlFolderUri, file[0])));
         await sqlFileUris.forEach(async fileUri => {
@@ -24,6 +33,14 @@ export class SqlManager {
 
     static getSqlTypes(): string[] {
         return Array.from(this.sqlFiles.keys());
+    }
+
+    static getSqlQueries(sqlType: string): Sql {
+        const sqlFile = this.sqlFiles.get(sqlType);
+        if (sqlFile) {
+            return sqlFile;
+        }
+        throw new Error(`SQL type ${sqlType} not found`);
     }
 
 }

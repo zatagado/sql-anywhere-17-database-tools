@@ -3,6 +3,6 @@
     "navigation": {
         "databaseTree": {
             "tables": "SELECT TOP $limit START AT $start_at user_name  AS Owner, table_name AS TableName FROM SYS.SYSTABLE LEFT JOIN SYS.SYSUSER ON creator = user_id WHERE table_type = 'BASE' AND user_name NOT IN ('SYS', 'dbo') ORDER BY user_name, table_name;"
-        } // TODO use prepared statements to replace $limit and $start_at with actual values
+        }
     }
 }

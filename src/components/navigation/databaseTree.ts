@@ -1,4 +1,5 @@
 import { ConnectionManager, DataSource } from '../../manager/connectionManager';
+import { DatabaseTreeRest } from '../../rest/navigation/databaseTreeRest';
 import {
     Command,
     Event,
@@ -62,18 +63,25 @@ export class DatabaseTree implements TreeDataProvider<DatabaseItem> {
                 TreeItemCollapsibleState.Collapsed,
                 undefined,
                 async (typesNode: DatabaseItem): Promise<DatabaseItem[]> => {
-                    // const tables = await ConnectionManager.execute(typesNode.dataSource, 'SELECT TOP 50 * FROM sys.systable');
-                    ConnectionManager.execute(typesNode.dataSource, 'SELECT TOP 100 * FROM sys.systables').then(tables => {
-                        return tables.map(table => new DatabaseItem(
-                            databaseNode.extensionRoot,
-                            `${}.${table['table_name']}`,
-                            typesNode.dataSource,
-                            TreeItemCollapsibleState.None,
-                            undefined,
-                            undefined
-                        ));
-                    });
-                    return;
+                    try {
+                        const rows = await DatabaseTreeRest.getTables(typesNode.dataSource, 50, 0);
+                        return rows
+                            .map(row => {
+                                const r = row as Record<string, unknown>;
+                                return String(r.TableName ?? r.tablename ?? '');
+                            })
+                            .filter(name => name.length > 0)
+                            .map(tableName => new DatabaseItem(
+                                databaseNode.extensionRoot,
+                                tableName,
+                                typesNode.dataSource,
+                                TreeItemCollapsibleState.None,
+                                undefined,
+                                undefined
+                            ));
+                    } catch {
+                        return [];
+                    }
                 }
             ),
             new DatabaseItem(
