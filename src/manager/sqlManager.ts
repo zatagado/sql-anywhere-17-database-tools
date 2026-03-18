@@ -6,11 +6,11 @@ import {
 
 export interface Sql {
     name: string;
-    navigation?: {
-        databaseTree?: {
-            tables?: string;
-            views?: string;
-            procedures?: string;
+    navigation: {
+        databaseTree: {
+            tables: string;
+            views: string;
+            procedures: string;
         };
     };
 }

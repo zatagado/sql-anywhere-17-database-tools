@@ -64,7 +64,7 @@
             "view/item/context": [
                 {
                     "command": "databaseTree.removeDatasource",
-                    "when": "view == databaseTree && viewItem == databaseItem"
+                    "when": "view == databaseTree && viewItem == databaseTreeItem"
                 }
             ]
         },
