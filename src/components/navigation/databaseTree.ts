@@ -11,7 +11,7 @@ import {
     Uri,
 } from 'vscode';
 
-export enum TypesItemType {
+export enum DatabaseObjectType {
     Tables = 'Tables',
     Views = 'Views',
     Procedures = 'Procedures',
@@ -23,6 +23,8 @@ export class DatabaseTree implements TreeDataProvider<DatabaseTreeItem> {
 
     private _onDidChangeTreeData: EventEmitter<DatabaseTreeItem | undefined | void> = new EventEmitter<DatabaseTreeItem | undefined | void>();
     readonly onDidChangeTreeData: Event<DatabaseTreeItem | undefined | void> = this._onDidChangeTreeData.event;
+
+    // TODO event that opens a virtual document, 
 
     private databaseNodes: DatabaseItem[] = [];
 
@@ -117,7 +119,7 @@ export class DatabaseItem extends DatabaseTreeItem {
     getChildren(): Promise<TypesItem[]> {
         return Promise.resolve([
             new TypesItem(
-                TypesItemType.Tables,
+                DatabaseObjectType.Tables,
                 TreeItemCollapsibleState.Collapsed,
                 {
                     light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'folder.svg'),
@@ -126,7 +128,7 @@ export class DatabaseItem extends DatabaseTreeItem {
                 this,
             ),
             new TypesItem(
-                TypesItemType.Views,
+                DatabaseObjectType.Views,
                 TreeItemCollapsibleState.Collapsed,
                 {
                     light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'folder.svg'),
@@ -135,7 +137,7 @@ export class DatabaseItem extends DatabaseTreeItem {
                 this,
             ),
             new TypesItem(
-                TypesItemType.Procedures,
+                DatabaseObjectType.Procedures,
                 TreeItemCollapsibleState.Collapsed,
                 {
                     light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'folder.svg'),
@@ -149,11 +151,11 @@ export class DatabaseItem extends DatabaseTreeItem {
 
 export class TypesItem extends DatabaseTreeItem {
 
-    public readonly type: TypesItemType;
+    public readonly type: DatabaseObjectType;
     public readonly parentNode: DatabaseItem;
 
     constructor(
-        type: TypesItemType,
+        type: DatabaseObjectType,
         collapsibleState: TreeItemCollapsibleState,
         iconPath: { light: Uri; dark: Uri },
         parentNode: DatabaseItem,
@@ -167,7 +169,7 @@ export class TypesItem extends DatabaseTreeItem {
 
     async getChildren(): Promise<ObjectItem[]> {
         switch (this.type) {
-            case TypesItemType.Tables: {
+            case DatabaseObjectType.Tables: {
                 const rows = await DatabaseTreeRest.getTables(this.parentNode.dataSource, 10000, 0);
                 return rows.map((row => {
                     const table = row as { TableName: string };
@@ -183,7 +185,7 @@ export class TypesItem extends DatabaseTreeItem {
                     );
                 }));
             }
-            case TypesItemType.Views: {
+            case DatabaseObjectType.Views: {
                 const rows = await DatabaseTreeRest.getViews(this.parentNode.dataSource, 10000, 0);
                 return rows.map((row => {
                     const view = row as { ViewName: string };
@@ -199,7 +201,7 @@ export class TypesItem extends DatabaseTreeItem {
                     );
                 }));
             }
-            case TypesItemType.Procedures: {
+            case DatabaseObjectType.Procedures: {
                 const rows = await DatabaseTreeRest.getProcedures(this.parentNode.dataSource, 10000, 0);
                 return rows.map((row => {
                     const procedure = row as { ProcedureName: string };
@@ -237,4 +239,8 @@ export class ObjectItem extends DatabaseTreeItem {
         this.parentNode = parentNode;
         this.command = command;
     }
+
+    // TODO get dataSource from the grandparent
+
+    // TODO get type from the parent
 }
