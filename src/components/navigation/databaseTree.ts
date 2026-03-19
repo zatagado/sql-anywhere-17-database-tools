@@ -11,56 +11,67 @@ import {
     Uri,
 } from 'vscode';
 
-export class DatabaseTree implements TreeDataProvider<DatabaseItem> {
+export enum TypesItemType {
+    Tables = 'Tables',
+    Views = 'Views',
+    Procedures = 'Procedures',
+}
 
-    private _onDidChangeTreeData: EventEmitter<DatabaseItem | undefined | void> = new EventEmitter<DatabaseItem | undefined | void>();
-    readonly onDidChangeTreeData: Event<DatabaseItem | undefined | void> = this._onDidChangeTreeData.event;
+export class DatabaseTree implements TreeDataProvider<DatabaseTreeItem> {
+
+    public static context: ExtensionContext;
+
+    private _onDidChangeTreeData: EventEmitter<DatabaseTreeItem | undefined | void> = new EventEmitter<DatabaseTreeItem | undefined | void>();
+    readonly onDidChangeTreeData: Event<DatabaseTreeItem | undefined | void> = this._onDidChangeTreeData.event;
 
     private databaseNodes: DatabaseItem[] = [];
 
     constructor(
         private readonly context: ExtensionContext
     ) {
+        DatabaseTree.context = context;
+
         const previousTreeDatasources = this.context.workspaceState.get('databaseTreeDatabases') as string[] ?? [];
         this.databaseNodes = previousTreeDatasources.map(dataSourceName => new DatabaseItem(
-            this.context.extensionUri,
             dataSourceName,
             TreeItemCollapsibleState.Collapsed,
-            ConnectionManager.getDataSource(dataSourceName)!,
-            this.createTypesNodes
+            ConnectionManager.getDataSource(dataSourceName)!
         ));
     }
 
-    refresh(node?: DatabaseItem): void {
+    refresh(node?: DatabaseTreeItem): void {
         this._onDidChangeTreeData.fire(node);
     }
 
-    getTreeItem(node: DatabaseItem): TreeItem {
+    getTreeItem(node: DatabaseTreeItem): TreeItem {
         return node;
     }
 
-    getChildren(node?: DatabaseItem): Thenable<DatabaseItem[]> {
-        if (node) {
-            if (node.getChildren) {
-                return node.getChildren(node);
+    getChildren(node?: DatabaseTreeItem): Thenable<DatabaseTreeItem[]> {
+        if (!node) {
+            return Promise.resolve(this.databaseNodes);
+        }
+        else {
+            if (node instanceof DatabaseItem) {
+                return node.getChildren();
+            }
+            else if (node instanceof TypesItem) {
+                return node.getChildren();
             }
             else {
                 return Promise.resolve([]);
             }
         }
-        else {
-            return Promise.resolve(this.databaseNodes);
-        }
     }
 
     addDatabase(dataSource: DataSource): void {
-        // TODO do not allow duplicates, may need to queue additions while loading
+        if (this.databaseNodes.some(databaseNode => databaseNode.dataSource.getName() === dataSource.getName())) {
+            return;
+        }
         this.databaseNodes.push(new DatabaseItem(
-            this.context.extensionUri,
             dataSource.getName(),
             TreeItemCollapsibleState.Collapsed,
-            dataSource,
-            this.createTypesNodes
+            dataSource
         ));
         this.refresh();
         this.context.workspaceState.update('databaseTreeDatabases', this.databaseNodes.map(database => database.label));
@@ -72,60 +83,64 @@ export class DatabaseTree implements TreeDataProvider<DatabaseItem> {
         this.context.workspaceState.update('databaseTreeDatabases', this.databaseNodes.map(database => database.label));
     }
 }
+
 export class DatabaseTreeItem extends TreeItem {
 
-    public readonly extensionRoot: Uri;
-
     constructor(
-        extensionRoot: Uri,
         label: string,
         collapsibleState: TreeItemCollapsibleState
     ) {
         super(label, collapsibleState);
-
-        this.extensionRoot = extensionRoot;
     }
 
     contextValue = 'databaseTreeItem';
 }
 
 export class DatabaseItem extends DatabaseTreeItem {
+
     public readonly dataSource: DataSource;
 
     constructor(
-        extensionRoot: Uri,
         label: string,
         collapsibleState: TreeItemCollapsibleState,
         dataSource: DataSource
     ) {
-        super(extensionRoot, label, collapsibleState);
+        super(label, collapsibleState);
 
         this.dataSource = dataSource;
-
         this.iconPath = {
-            light: Uri.joinPath(extensionRoot, 'resources', 'light', 'dependency.svg'),
-            dark: Uri.joinPath(extensionRoot, 'resources', 'dark', 'dependency.svg'),
+            light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'database.svg'),
+            dark: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'dark', 'database.svg'),
         };
     }
 
     getChildren(): Promise<TypesItem[]> {
         return Promise.resolve([
             new TypesItem(
-                this.extensionRoot,
-                'Tables',
+                TypesItemType.Tables,
                 TreeItemCollapsibleState.Collapsed,
+                {
+                    light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'folder.svg'),
+                    dark: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'dark', 'folder.svg'),
+                },
                 this,
             ),
             new TypesItem(
-                this.extensionRoot,
-                'Views',
+                TypesItemType.Views,
                 TreeItemCollapsibleState.Collapsed,
+                {
+                    light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'folder.svg'),
+                    dark: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'dark', 'folder.svg'),
+                },
                 this,
             ),
             new TypesItem(
-                this.extensionRoot,
-                'Procedures',
+                TypesItemType.Procedures,
                 TreeItemCollapsibleState.Collapsed,
+                {
+                    light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'folder.svg'),
+                    dark: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'dark', 'folder.svg'),
+                },
                 this,
             )
         ]);
@@ -134,42 +149,74 @@ export class DatabaseItem extends DatabaseTreeItem {
 
 export class TypesItem extends DatabaseTreeItem {
 
-    enum DatabaseObjectType {
-        Tables = 'Tables',
-        Views = 'Views',
-        Procedures = 'Procedures'
-    }
-
+    public readonly type: TypesItemType;
     public readonly parentNode: DatabaseItem;
 
     constructor(
-        extensionRoot: Uri,
-        label: string,
+        type: TypesItemType,
         collapsibleState: TreeItemCollapsibleState,
+        iconPath: { light: Uri; dark: Uri },
         parentNode: DatabaseItem,
     ) {
-        super(extensionRoot, label, collapsibleState);
+        super(type, collapsibleState);
 
+        this.type = type;
+        this.iconPath = iconPath;
         this.parentNode = parentNode;
     }
 
-    getChildren(): Promise<ObjectItem[]> {
-        if (this.parentNode.label === 'Tables') {
-            try {
-                const rows = await DatabaseTreeRest.getTables(typesNode.dataSource, 10000, 0);
-                return rows.map((row: unknown) => {
-                    const o = row as Record<string, string>;
+    async getChildren(): Promise<ObjectItem[]> {
+        switch (this.type) {
+            case TypesItemType.Tables: {
+                const rows = await DatabaseTreeRest.getTables(this.parentNode.dataSource, 10000, 0);
+                return rows.map((row => {
+                    const table = row as { TableName: string };
                     return new ObjectItem(
-                        this.parentNode.extensionRoot,
-                        o.TableName ?? o.TABLENAME ?? '',
+                        table.TableName,
                         TreeItemCollapsibleState.None,
-                        this.parentNode
+                        {
+                            light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'table.svg'),
+                            dark: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'dark', 'table.svg'),
+                        },
+                        this,
+                        undefined
                     );
-                });
-            } catch {
-                return [];
+                }));
+            }
+            case TypesItemType.Views: {
+                const rows = await DatabaseTreeRest.getViews(this.parentNode.dataSource, 10000, 0);
+                return rows.map((row => {
+                    const view = row as { ViewName: string };
+                    return new ObjectItem(
+                        view.ViewName,
+                        TreeItemCollapsibleState.None,
+                        {
+                            light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'view.svg'),
+                            dark: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'dark', 'view.svg'),
+                        },
+                        this,
+                        undefined
+                    );
+                }));
+            }
+            case TypesItemType.Procedures: {
+                const rows = await DatabaseTreeRest.getProcedures(this.parentNode.dataSource, 10000, 0);
+                return rows.map((row => {
+                    const procedure = row as { ProcedureName: string };
+                    return new ObjectItem(
+                        procedure.ProcedureName,
+                        TreeItemCollapsibleState.None,
+                        {
+                            light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'procedure.svg'),
+                            dark: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'dark', 'procedure.svg'),
+                        },
+                        this,
+                        undefined
+                    );
+                }));
             }
         }
+    }
 }
 
 export class ObjectItem extends DatabaseTreeItem {
@@ -178,14 +225,15 @@ export class ObjectItem extends DatabaseTreeItem {
     public readonly command?: Command;
 
     constructor(
-        extensionRoot: Uri,
         label: string,
         collapsibleState: TreeItemCollapsibleState,
+        iconPath: { light: Uri, dark: Uri },
         parentNode: TypesItem,
         command?: Command
     ) {
-        super(extensionRoot, label, collapsibleState, undefined);
+        super(label, collapsibleState);
 
+        this.iconPath = iconPath;
         this.parentNode = parentNode;
         this.command = command;
     }

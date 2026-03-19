@@ -2,7 +2,8 @@
     "name": "MySQL",
     "navigation": {
         "databaseTree": {
-            "tables": "SELECT TABLE_NAME AS TableName FROM information_schema.tables WHERE table_schema = DATABASE() LIMIT $limit OFFSET $offset;"
+            "tables": "SELECT TABLE_NAME AS TableName FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE' LIMIT $limit OFFSET $offset;",
+            "views": "SELECT TABLE_NAME AS ViewName FROM information_schema.views WHERE table_schema = DATABASE() LIMIT $limit OFFSET $offset;"
         }
     }
 }

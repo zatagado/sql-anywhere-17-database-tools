@@ -83,7 +83,7 @@
                 {
                     "id": "database-tools",
                     "title": "Database Tools",
-                    "icon": "media/dep.svg"
+                    "icon": "media/datasources.svg"
                 }
             ]
         },
