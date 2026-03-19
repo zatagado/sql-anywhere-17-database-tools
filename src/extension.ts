@@ -1,9 +1,9 @@
-import * as vscode from 'vscode';
-import * as odbc from 'odbc';
-import { ConnectionManager, DataSource } from './manager/connectionManager';
 import { DatabaseItem, DatabaseTree } from './components/navigation/databaseTree';
 import { datasourceQuickPick } from './components/selection/datasourceQuickPick';
+import { databaseObjectVirtualDocument } from './components/preview/databaseObjectVirtualDocument';
+import { ConnectionManager, DataSource } from './manager/connectionManager';
 import { SqlManager } from './manager/sqlManager';
+import * as vscode from 'vscode';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -70,6 +70,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('databaseTree.removeDatasource', (node: DatabaseItem) => 
         databaseTreeProvider.removeDatabase(node));
     vscode.commands.registerCommand('databaseTree.refresh', () => databaseTreeProvider.refresh());
+
+    databaseObjectVirtualDocument(context);
 }
 
 export function deactivate() { }

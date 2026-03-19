@@ -1,5 +1,6 @@
 {
     "name": "sql-anywhere-17-database-tools",
+    "publisher": "sql-anywhere-17-database-tools",
     "displayName": "SQL Anywhere 17 Database Tools",
     "description": "",
     "version": "0.0.1",
@@ -40,6 +41,10 @@
                     "light": "resources/light/edit.svg",
                     "dark": "resources/dark/edit.svg"
                 }
+            },
+            {
+                "command": "sql-anywhere-17-database-tools.openVirtualDocument",
+                "title": "Open Virtual Document"
             }
         ],
         "menus": {
