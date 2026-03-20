@@ -9,18 +9,18 @@ import {
     workspace
 } from 'vscode';
 
-// export function databaseObjectVirtualDocument(context: ExtensionContext) {
-//     context.subscriptions.push(workspace.registerTextDocumentContentProvider('virtualSQL', new DatabaseObjectVirtualDocument()));
+export function databaseObjectVirtualDocument(context: ExtensionContext) {
+    context.subscriptions.push(workspace.registerTextDocumentContentProvider('virtualSQL', new DatabaseObjectVirtualDocument()));
 
-//     context.subscriptions.push(commands.registerCommand('sql-anywhere-17-database-tools.openVirtualDocument', async () => {
-//         const what = await window.showInputBox({ placeHolder: 'Test SQL Virtual Document' });
-//         if (what) {
-//             const uri = Uri.parse(`virtualSQL:${what}.sql`);
-//             const doc = await workspace.openTextDocument(uri);
-//             await window.showTextDocument(doc, { preview: false });
-//         }
-//     }));
-// }
+    context.subscriptions.push(commands.registerCommand('sql-anywhere-17-database-tools.openVirtualDocument', async () => {
+        const what = await window.showInputBox({ placeHolder: 'Test SQL Virtual Document' });
+        if (what) {
+            const uri = Uri.parse(`virtualSQL:${what}.sql`);
+            const doc = await workspace.openTextDocument(uri);
+            await window.showTextDocument(doc, { preview: false });
+        }
+    }));
+}
 
 // export function openDatabaseObjectVirtualDocument(dataSource: DataSource, objectName: string, objectType: )
 

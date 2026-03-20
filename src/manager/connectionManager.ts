@@ -3,6 +3,8 @@ import { ExtensionContext } from 'vscode';
 
 export class ConnectionManager {
 
+    // TODO removing a datasource should trigger an event that tree will need to subscribe to
+
     private static context: ExtensionContext;
     private static stack: DataSource[] = [];
 
@@ -28,6 +30,21 @@ export class ConnectionManager {
             this.stack = this.stack.filter(otherDataSource => otherDataSource.getName() !== newDataSource.getName());
         }
         this.stack.push(newDataSource);
+        this.context.globalState.update('dataSources', this.stack);
+    }
+
+    static removeDataSource(dataSource: DataSource | string): void {
+        let dataSourceToRemove: DataSource;
+        if (typeof dataSource === 'string') {
+            dataSourceToRemove = this.stack.find(otherDataSource => otherDataSource.getName() === dataSource)!;
+            if (!dataSourceToRemove) {
+                throw new Error(`DataSource ${dataSource} not found in stack`);
+            }
+        }
+        else {
+            dataSourceToRemove = dataSource;
+        }
+        this.stack = this.stack.filter(otherDataSource => otherDataSource.getName() !== dataSourceToRemove.getName());
         this.context.globalState.update('dataSources', this.stack);
     }
 

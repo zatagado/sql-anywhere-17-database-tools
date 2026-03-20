@@ -45,6 +45,10 @@
             {
                 "command": "sql-anywhere-17-database-tools.openVirtualDocument",
                 "title": "Open Virtual Document"
+            },
+            {
+                "command": "sql-anywhere-17-database-tools.removeDatasource",
+                "title": "Remove Datasource"
             }
         ],
         "menus": {
