@@ -1,5 +1,5 @@
 import { DatabaseItem, DatabaseTree } from './components/navigation/databaseTree';
-import { datasourceQuickPick } from './components/selection/datasourceQuickPick';
+import { DatasourceSelection } from './components/selection/datasourceQuickPick';
 import { databaseObjectVirtualDocument } from './components/preview/databaseObjectVirtualDocument';
 import { ConnectionManager, DataSource } from './manager/connectionManager';
 import { SqlManager } from './manager/sqlManager';
@@ -48,21 +48,13 @@ export function activate(context: vscode.ExtensionContext) {
     // });
     // context.subscriptions.push(editCommand);
 
-    // ConnectionManager.prepare(new DataSource('MySQL alpha', 'MySQL'), 'SELECT TABLE_NAME AS TableName FROM information_schema.tables WHERE table_schema = DATABASE() LIMIT $limit OFFSET $offset;', false).then(preparedStatement => {
-    //     preparedStatement.bind('offset', 1);
-    //     preparedStatement.bind('limit', 3);
-    //     return preparedStatement.execute().then(result => {
-    //         console.log(result);
-    //     });
-    // });
-
     // TODO start actual code
     const databaseTreeProvider = new DatabaseTree(context);
     vscode.window.registerTreeDataProvider('databaseTree', databaseTreeProvider);
 
     // TODO the result of this gets added to the database tree
-    vscode.commands.registerCommand('databaseTree.addDatasource', () => datasourceQuickPick(context).then(
-        dataSource => {
+    vscode.commands.registerCommand('databaseTree.addDatasource', 
+        () => DatasourceSelection.selectDatasource(context).then(dataSource => {
             if (dataSource) {
                 databaseTreeProvider.addDatabase(dataSource);
             }
@@ -70,6 +62,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('databaseTree.removeDatasource', (node: DatabaseItem) => 
         databaseTreeProvider.removeDatabase(node));
     vscode.commands.registerCommand('databaseTree.refresh', () => databaseTreeProvider.refresh());
+
+    vscode.commands.registerCommand('sql-anywhere-17-database-tools.removeDatasource',
+        () => DatasourceSelection.removeDatasource(context));
 
     databaseObjectVirtualDocument(context);
 }

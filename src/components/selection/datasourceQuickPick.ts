@@ -12,77 +12,119 @@ import {
     workspace,
 } from 'vscode';
 
-export async function datasourceQuickPick(context: ExtensionContext) {
+export class DatasourceSelection {
 
-    const dataSources: QuickPickItem[] = ConnectionManager.getDataSources().map(
-        dataSource => ({ label: dataSource.getName() }));
-    const dataSourceTypes: QuickPickItem[] = SqlManager.getSqlTypes().map(type => ({ label: type }));
+    static async selectDatasource(context: ExtensionContext) {
+        const dataSources = ConnectionManager.getDataSources().map(dataSource => ({ label: dataSource.getName() }));
+        const dataSourceTypes = SqlManager.getSqlTypes().map(type => ({ label: type }));
+        const title = 'Connect to Datasource';
 
-    interface State {
-        dataSource: string;
-        dataSourceType: string;
-    }
+        interface State {
+            dataSource: string;
+            dataSourceType: string;
+        }
+    
+        async function collectInputs() {
+            const state = {} as Partial<State>;
+            await DatasourceQuickPick.run(input => selectDatasource(input, state));
+            return state as State;
+        }
+    
+        async function selectDatasource(input: DatasourceQuickPick, state: Partial<State>) {
+            const selection: QuickPickItem = await input.showQuickPick({
+                title,
+                placeholder: 'Select or enter a datasource',
+                items: dataSources,
+                searchInput: true
+            });
+            const dataSource = ConnectionManager.getDataSources().find(
+                dataSource => dataSource.getName() === selection.label);
+            if (dataSource) {
+                state.dataSource = dataSource.getName();
+                state.dataSourceType = dataSource.getType();
+            }
+            else {
+                state.dataSource = selection.label;
+                return (input: DatasourceQuickPick) => selectDatasourceType(input, state);
+            }
+        }
+    
+        async function selectDatasourceType(input: DatasourceQuickPick, state: Partial<State>) {
+            const selection: QuickPickItem = await input.showQuickPick({
+                title,
+                placeholder: 'Select a datasource type',
+                items: dataSourceTypes
+            });
+            state.dataSourceType = selection.label;
+        }
+    
+        async function validateDatasource(dataSource: DataSource) {
+            try {
+                await dataSource.getConnection();
+                return true;
+            } catch (error) {
+                return false;
+            }
+        }
 
-    async function collectInputs() {
-        const state = {} as Partial<State>;
-        await DatasourceQuickPick.run(input => selectDatasource(input, state));
-        return state as State;
-    }
-
-    const title = 'Connect to Datasource';
-
-    async function selectDatasource(input: DatasourceQuickPick, state: Partial<State>) {
-        const selection: QuickPickItem = await input.showQuickPick({
-            title,
-            placeholder: 'Select or enter a datasource',
-            items: dataSources,
-            searchInput: true
-        });
-        const dataSource = ConnectionManager.getDataSources().find(
-            dataSource => dataSource.getName() === selection.label);
-        if (dataSource) {
-            state.dataSource = dataSource.getName();
-            state.dataSourceType = dataSource.getType();
+        const state = await collectInputs();
+        const dataSource = ConnectionManager.getDataSource(state.dataSource) ??
+            new DataSource(state.dataSource, state.dataSourceType);
+        if (dataSource.isConnected()) {
+            ConnectionManager.saveDataSource(dataSource);
+            return dataSource;
+        }
+        else if (await validateDatasource(dataSource)) {
+            ConnectionManager.saveDataSource(dataSource);
+            window.showInformationMessage(`Connected to ${dataSource.getName()}`);
+            return dataSource;
         }
         else {
+            window.showErrorMessage(`Failed to connect to ${dataSource.getName()}`);
+            return null;
+        }
+    }
+
+    static async removeDatasource(context: ExtensionContext): Promise<string | null> {
+        const dataSources = ConnectionManager.getDataSources().map(dataSource => ({ label: dataSource.getName() }));
+
+        interface State {
+            dataSource: string;
+        }
+
+        async function collectInputs() {
+            const state = {} as Partial<State>;
+            await DatasourceQuickPick.run(input => removeDatasource(input, state));
+            return state as State;
+        }
+
+        async function removeDatasource(input: DatasourceQuickPick, state: Partial<State>) {
+            const selection: QuickPickItem = await input.showQuickPick({
+                title: 'Remove Datasource',
+                placeholder: 'Select a datasource to remove',
+                items: dataSources
+            });
             state.dataSource = selection.label;
-            return (input: DatasourceQuickPick) => selectDatasourceType(input, state);
         }
-    }
 
-    async function selectDatasourceType(input: DatasourceQuickPick, state: Partial<State>) {
-        const selection: QuickPickItem = await input.showQuickPick({
-            title,
-            placeholder: 'Select a datasource type',
-            items: dataSourceTypes
-        });
-        state.dataSourceType = selection.label;
-    }
+        if (ConnectionManager.getDataSources().length === 0) {
+            window.showWarningMessage('No saved datasources to remove.');
+            return null;
+        }
 
-    async function validateDatasource(dataSource: DataSource) {
+        const state = await collectInputs();
+        const dataSource = ConnectionManager.getDataSource(state.dataSource);
+        if (!dataSource) {
+            return null;
+        }
         try {
-            await dataSource.getConnection();
-            return true;
+            ConnectionManager.removeDataSource(dataSource);
+            window.showInformationMessage(`Removed datasource ${dataSource.getName()}`);
+            return dataSource.getName();
         } catch (error) {
-            return false;
+            window.showErrorMessage(`Could not remove datasource ${dataSource.getName()}`);
+            return null;
         }
-    }
-
-    const state = await collectInputs();
-    const dataSource = ConnectionManager.getDataSource(state.dataSource) ??
-        new DataSource(state.dataSource, state.dataSourceType);
-    if (dataSource.isConnected()) {
-        ConnectionManager.saveDataSource(dataSource);
-        return dataSource;
-    }
-    else if (await validateDatasource(dataSource)) {
-        ConnectionManager.saveDataSource(dataSource);
-        window.showInformationMessage(`Connected to ${dataSource.getName()}`);
-        return dataSource;
-    }
-    else {
-        window.showErrorMessage(`Failed to connect to ${dataSource.getName()}`);
-        return null;
     }
 }
 
