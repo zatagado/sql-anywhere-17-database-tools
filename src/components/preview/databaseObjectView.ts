@@ -1,4 +1,10 @@
 import {
+    DatabaseObjectViewRest
+} from '../../rest/preview/databaseObjectViewRest';
+import {
+    ObjectItem
+} from '../navigation/databaseTree';
+import {
     commands,
     Event,
     EventEmitter,
@@ -20,6 +26,12 @@ export function databaseObjectVirtualDocument(context: ExtensionContext) {
             await window.showTextDocument(doc, { preview: false });
         }
     }));
+}
+
+export async function viewObject(node: ObjectItem) {
+    // TODO use the rest function to get the content of the object
+    const view = await DatabaseObjectViewRest.getView(node.parentNode.parentNode.dataSource, node.label as string);
+    // show text document.
 }
 
 // export function openDatabaseObjectVirtualDocument(dataSource: DataSource, objectName: string, objectType: )

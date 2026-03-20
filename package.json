@@ -23,7 +23,7 @@
                 "title": "Add Datasource"
             },
             {
-                "command": "databaseTree.removeDatasource",
+                "command": "_databaseTree.removeDatasource",
                 "title": "Remove Datasource"
             },
             {
@@ -52,6 +52,12 @@
             }
         ],
         "menus": {
+            "commandPalette": [
+                {
+                    "command": "_databaseTree.removeDatasource",
+                    "when": "false"
+                }
+            ],
             "editor/title": [
                 {
                     "command": "sql-anywhere-17-database-tools.edit",
@@ -72,8 +78,8 @@
             ],
             "view/item/context": [
                 {
-                    "command": "databaseTree.removeDatasource",
-                    "when": "view == databaseTree && viewItem == databaseTreeItem"
+                    "command": "_databaseTree.removeDatasource",
+                    "when": "view == databaseTree && viewItem == databaseItem"
                 }
             ]
         },

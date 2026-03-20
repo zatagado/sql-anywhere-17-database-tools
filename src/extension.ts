@@ -1,14 +1,14 @@
-import { DatabaseItem, DatabaseTree } from './components/navigation/databaseTree';
-import { DatasourceSelection } from './components/selection/datasourceQuickPick';
-import { databaseObjectVirtualDocument } from './components/preview/databaseObjectVirtualDocument';
-import { ConnectionManager, DataSource } from './manager/connectionManager';
-import { SqlManager } from './manager/sqlManager';
+import * as databaseTree from './components/navigation/databaseTree';
+import * as datasourcePick from './components/selection/datasourcePick';
+import * as databaseObjectView from './components/preview/databaseObjectView';
+import * as connectionManager from './manager/connectionManager';
+import * as sqlManager from './manager/sqlManager';
 import * as vscode from 'vscode';
 
 export function activate(context: vscode.ExtensionContext) {
 
-    SqlManager.load(context);
-    ConnectionManager.load(context);
+    sqlManager.SqlManager.load(context);
+    connectionManager.ConnectionManager.load(context);
 
     // let webview = vscode.commands.registerCommand('sql-anywhere-17-database-tools.namasteworld', () => {
 
@@ -49,24 +49,27 @@ export function activate(context: vscode.ExtensionContext) {
     // context.subscriptions.push(editCommand);
 
     // TODO start actual code
-    const databaseTreeProvider = new DatabaseTree(context);
+    const databaseTreeProvider = new databaseTree.DatabaseTree(context);
     vscode.window.registerTreeDataProvider('databaseTree', databaseTreeProvider);
 
     // TODO the result of this gets added to the database tree
     vscode.commands.registerCommand('databaseTree.addDatasource', 
-        () => DatasourceSelection.selectDatasource(context).then(dataSource => {
+        () => datasourcePick.selectDatasource(context).then(dataSource => {
             if (dataSource) {
                 databaseTreeProvider.addDatabase(dataSource);
             }
         }));
-    vscode.commands.registerCommand('databaseTree.removeDatasource', (node: DatabaseItem) => 
+    vscode.commands.registerCommand('_databaseTree.removeDatasource', (node: databaseTree.DatabaseItem) => 
         databaseTreeProvider.removeDatabase(node));
     vscode.commands.registerCommand('databaseTree.refresh', () => databaseTreeProvider.refresh());
 
-    vscode.commands.registerCommand('sql-anywhere-17-database-tools.removeDatasource',
-        () => DatasourceSelection.removeDatasource(context));
+    vscode.commands.registerCommand('databaseTree.viewObject', (node: databaseTree.ObjectItem) =>
+        databaseObjectView.viewObject(node)); // TODO maybe wrap in a static clas
 
-    databaseObjectVirtualDocument(context);
+    vscode.commands.registerCommand('sql-anywhere-17-database-tools.removeDatasource',
+        () => datasourcePick.removeDatasource(context));
+
+    databaseObjectView.databaseObjectVirtualDocument(context);
 }
 
 export function deactivate() { }

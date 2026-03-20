@@ -13,6 +13,13 @@ export interface Sql {
             procedures: string;
         };
     };
+    preview: {
+        databaseObject: {
+            table: string;
+            view: string;
+            procedure: string;
+        };
+    };
 }
 
 export class SqlManager {
