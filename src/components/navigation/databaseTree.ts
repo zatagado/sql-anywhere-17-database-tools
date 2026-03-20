@@ -94,8 +94,6 @@ export class DatabaseTreeItem extends TreeItem {
     ) {
         super(label, collapsibleState);
     }
-
-    contextValue = 'databaseTreeItem';
 }
 
 export class DatabaseItem extends DatabaseTreeItem {
@@ -147,6 +145,8 @@ export class DatabaseItem extends DatabaseTreeItem {
             )
         ]);
     }
+
+    contextValue = 'databaseItem';
 }
 
 export class TypesItem extends DatabaseTreeItem {
@@ -181,7 +181,11 @@ export class TypesItem extends DatabaseTreeItem {
                             dark: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'dark', 'table.svg'),
                         },
                         this,
-                        undefined
+                        {
+                            command: 'databaseTree.viewObject',
+                            title: '',
+                            arguments: [this]
+                        }
                     );
                 }));
             }
@@ -197,7 +201,11 @@ export class TypesItem extends DatabaseTreeItem {
                             dark: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'dark', 'view.svg'),
                         },
                         this,
-                        undefined
+                        {
+                            command: 'databaseTree.viewObject',
+                            title: '',
+                            arguments: [this]
+                        }
                     );
                 }));
             }
@@ -213,7 +221,11 @@ export class TypesItem extends DatabaseTreeItem {
                             dark: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'dark', 'procedure.svg'),
                         },
                         this,
-                        undefined
+                        {
+                            command: 'databaseTree.viewObject',
+                            title: '',
+                            arguments: [this]
+                        }
                     );
                 }));
             }
@@ -224,20 +236,17 @@ export class TypesItem extends DatabaseTreeItem {
 export class ObjectItem extends DatabaseTreeItem {
     
     public readonly parentNode: TypesItem;
-    public readonly command?: Command;
 
     constructor(
         label: string,
         collapsibleState: TreeItemCollapsibleState,
         iconPath: { light: Uri, dark: Uri },
         parentNode: TypesItem,
-        command?: Command
+        public readonly command?: Command
     ) {
         super(label, collapsibleState);
-
         this.iconPath = iconPath;
         this.parentNode = parentNode;
-        this.command = command;
     }
 
     // TODO get dataSource from the grandparent

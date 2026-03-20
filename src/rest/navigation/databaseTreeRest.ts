@@ -2,9 +2,7 @@ import { ConnectionManager, DataSource } from '../../manager/connectionManager';
 import { Result } from 'odbc';
 import { SqlManager } from '../../manager/sqlManager';
 
-
 export class DatabaseTreeRest {
-
     static async getTables(dataSource: DataSource, limit: number, offset: number): Promise<Result<unknown>> {
         const tableQuery = SqlManager.getSqlQueries(dataSource.getType())!.navigation.databaseTree.tables;
         return ConnectionManager.prepare(dataSource, tableQuery, false).then(preparedStatement => {
