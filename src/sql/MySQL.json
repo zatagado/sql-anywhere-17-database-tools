@@ -3,16 +3,12 @@
     "navigation": {
         "databaseTree": {
             "tables": "SELECT TABLE_NAME AS TableName FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE' LIMIT $limit OFFSET $offset;",
-            "views": "SELECT TABLE_NAME AS ViewName FROM information_schema.views WHERE table_schema = DATABASE() LIMIT $limit OFFSET $offset;",
-            "viewDefinition": "SHOW CREATE VIEW '$viewName';",
-            "viewDefinition2": "SELECT VIEW_DEFINITION FROM INFORMATION_SCHEMA.VIEWS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '$viewName';"
+            "views": "SELECT TABLE_NAME AS ViewName FROM information_schema.views WHERE table_schema = DATABASE() LIMIT $limit OFFSET $offset;"
         }
     },
     "preview": {
         "databaseObject": {
-            "table": "SHOW CREATE TABLE $objectName",
-            "view": "SHOW CREATE VIEW $objectName",
-            "procedure": "SHOW CREATE PROCEDURE $objectName"
+            "view": "SELECT VIEW_DEFINITION AS ViewDefinition FROM information_schema.views WHERE table_schema = DATABASE() AND table_name = $viewName;"
         }
     }
 }

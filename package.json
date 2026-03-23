@@ -15,10 +15,6 @@
     "contributes": {
         "commands": [
             {
-                "command": "sql-anywhere-17-database-tools.namasteworld",
-                "title": "Vue Web View"
-            },
-            {
                 "command": "databaseTree.addDatasource",
                 "title": "Add Datasource"
             },

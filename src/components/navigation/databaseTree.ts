@@ -12,9 +12,9 @@ import {
 } from 'vscode';
 
 export enum DatabaseObjectType {
-    Tables = 'Tables',
-    Views = 'Views',
-    Procedures = 'Procedures',
+    Table = 'Table',
+    View = 'View',
+    Procedure = 'Procedure',
 }
 
 export class DatabaseTree implements TreeDataProvider<DatabaseTreeItem> {
@@ -117,7 +117,7 @@ export class DatabaseItem extends DatabaseTreeItem {
     getChildren(): Promise<TypesItem[]> {
         return Promise.resolve([
             new TypesItem(
-                DatabaseObjectType.Tables,
+                DatabaseObjectType.Table,
                 TreeItemCollapsibleState.Collapsed,
                 {
                     light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'folder.svg'),
@@ -126,7 +126,7 @@ export class DatabaseItem extends DatabaseTreeItem {
                 this,
             ),
             new TypesItem(
-                DatabaseObjectType.Views,
+                DatabaseObjectType.View,
                 TreeItemCollapsibleState.Collapsed,
                 {
                     light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'folder.svg'),
@@ -135,7 +135,7 @@ export class DatabaseItem extends DatabaseTreeItem {
                 this,
             ),
             new TypesItem(
-                DatabaseObjectType.Procedures,
+                DatabaseObjectType.Procedure,
                 TreeItemCollapsibleState.Collapsed,
                 {
                     light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'folder.svg'),
@@ -169,7 +169,7 @@ export class TypesItem extends DatabaseTreeItem {
 
     async getChildren(): Promise<ObjectItem[]> {
         switch (this.type) {
-            case DatabaseObjectType.Tables: {
+            case DatabaseObjectType.Table: {
                 const rows = await DatabaseTreeRest.getTables(this.parentNode.dataSource, 10000, 0);
                 return rows.map((row => {
                     const table = row as { TableName: string };
@@ -182,14 +182,13 @@ export class TypesItem extends DatabaseTreeItem {
                         },
                         this,
                         {
-                            command: 'databaseTree.viewObject',
-                            title: '',
-                            arguments: [this]
+                            command: 'databaseObjectView.open',
+                            title: ''
                         }
                     );
                 }));
             }
-            case DatabaseObjectType.Views: {
+            case DatabaseObjectType.View: {
                 const rows = await DatabaseTreeRest.getViews(this.parentNode.dataSource, 10000, 0);
                 return rows.map((row => {
                     const view = row as { ViewName: string };
@@ -202,14 +201,13 @@ export class TypesItem extends DatabaseTreeItem {
                         },
                         this,
                         {
-                            command: 'databaseTree.viewObject',
-                            title: '',
-                            arguments: [this]
+                            command: 'databaseObjectView.open',
+                            title: ''
                         }
                     );
                 }));
             }
-            case DatabaseObjectType.Procedures: {
+            case DatabaseObjectType.Procedure: {
                 const rows = await DatabaseTreeRest.getProcedures(this.parentNode.dataSource, 10000, 0);
                 return rows.map((row => {
                     const procedure = row as { ProcedureName: string };
@@ -222,9 +220,8 @@ export class TypesItem extends DatabaseTreeItem {
                         },
                         this,
                         {
-                            command: 'databaseTree.viewObject',
-                            title: '',
-                            arguments: [this]
+                            command: 'databaseObjectView.open',
+                            title: ''
                         }
                     );
                 }));
@@ -247,9 +244,16 @@ export class ObjectItem extends DatabaseTreeItem {
         super(label, collapsibleState);
         this.iconPath = iconPath;
         this.parentNode = parentNode;
+        if (this.command) {
+            this.command.arguments = [this];
+        }
     }
 
-    // TODO get dataSource from the grandparent
+    public getDataSource(): DataSource {
+        return this.parentNode.parentNode.dataSource;
+    }
 
-    // TODO get type from the parent
+    public getType(): DatabaseObjectType {
+        return this.parentNode.type;
+    }
 }

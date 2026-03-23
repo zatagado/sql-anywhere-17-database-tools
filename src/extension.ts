@@ -6,7 +6,7 @@ import * as sqlManager from './manager/sqlManager';
 import * as vscode from 'vscode';
 
 export function activate(context: vscode.ExtensionContext) {
-
+    // TODO rename these to activate
     sqlManager.SqlManager.load(context);
     connectionManager.ConnectionManager.load(context);
 
@@ -40,19 +40,9 @@ export function activate(context: vscode.ExtensionContext) {
 
     // context.subscriptions.push(webview);
 
-    // const editCommand = vscode.commands.registerCommand('sql-anywhere-17-database-tools.edit', () => {
-    //     const editor = vscode.window.activeTextEditor;
-    //     if (editor) {
-    //         vscode.window.showInformationMessage('Edit SQL', editor.document.uri.fsPath);
-    //     }
-    // });
-    // context.subscriptions.push(editCommand);
-
-    // TODO start actual code
+    // TODO add the subscriptions in the file, like with databaseObjectView
     const databaseTreeProvider = new databaseTree.DatabaseTree(context);
     vscode.window.registerTreeDataProvider('databaseTree', databaseTreeProvider);
-
-    // TODO the result of this gets added to the database tree
     vscode.commands.registerCommand('databaseTree.addDatasource', 
         () => datasourcePick.selectDatasource(context).then(dataSource => {
             if (dataSource) {
@@ -62,14 +52,12 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('_databaseTree.removeDatasource', (node: databaseTree.DatabaseItem) => 
         databaseTreeProvider.removeDatabase(node));
     vscode.commands.registerCommand('databaseTree.refresh', () => databaseTreeProvider.refresh());
-
-    vscode.commands.registerCommand('databaseTree.viewObject', (node: databaseTree.ObjectItem) =>
-        databaseObjectView.viewObject(node)); // TODO maybe wrap in a static clas
-
     vscode.commands.registerCommand('sql-anywhere-17-database-tools.removeDatasource',
         () => datasourcePick.removeDatasource(context));
-
-    databaseObjectView.databaseObjectVirtualDocument(context);
+    
+    context.subscriptions.push(
+        ...databaseObjectView.activate()
+    );
 }
 
 export function deactivate() { }
