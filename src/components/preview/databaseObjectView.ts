@@ -37,8 +37,29 @@ export function activate(): Disposable[] {
         }
     }
 
+    class ProcedureProvider implements TextDocumentContentProvider {
+        static readonly scheme = 'virtualProcedureSQL';
+
+        _onDidChangeEmitter = new EventEmitter<Uri>();
+        onDidChange = this._onDidChangeEmitter.event;
+
+        async provideTextDocumentContent(uri: Uri): Promise<string> {
+            const parts = uri.path.split('/');
+            const databaseName = parts[0];
+            const procedureName = parts[1].substring(0, parts[1].length - 4);
+            const procedure = (await DatabaseObjectViewRest.getProcedure(ConnectionManager.getDataSource(databaseName)!, procedureName))[0] as { ProcedureDefinition: string };
+            return procedure.ProcedureDefinition;
+        }
+    }
+
     async function openView(node: ObjectItem) {
         const uri = Uri.parse(`${ViewProvider.scheme}:${node.getDataSource().getName()}/${node.label}.sql`);
+        const doc = await workspace.openTextDocument(uri);
+        await window.showTextDocument(doc, { preview: false });
+    }
+
+    async function openProcedure(node: ObjectItem) {
+        const uri = Uri.parse(`${ProcedureProvider.scheme}:${node.getDataSource().getName()}/${node.label}.sql`);
         const doc = await workspace.openTextDocument(uri);
         await window.showTextDocument(doc, { preview: false });
     }
@@ -47,6 +68,8 @@ export function activate(): Disposable[] {
         switch (node.getType()) {
             case DatabaseObjectType.View:
                 return openView(node);
+            case DatabaseObjectType.Procedure:
+                return openProcedure(node);
             default:
                 return;
         }
@@ -54,6 +77,7 @@ export function activate(): Disposable[] {
         
     const subscriptions: Disposable[] = [];
     subscriptions.push(workspace.registerTextDocumentContentProvider(ViewProvider.scheme, new ViewProvider()));
+    subscriptions.push(workspace.registerTextDocumentContentProvider(ProcedureProvider.scheme, new ProcedureProvider()));
     subscriptions.push(commands.registerCommand('databaseObjectView.open', (node: ObjectItem) => openObjectItem(node)));
     return subscriptions;
 }

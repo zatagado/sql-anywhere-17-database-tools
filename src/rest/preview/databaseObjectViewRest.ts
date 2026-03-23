@@ -10,4 +10,12 @@ export class DatabaseObjectViewRest {
             return preparedStatement.execute();
         });
     }
+
+    static async getProcedure(dataSource: DataSource, procedureName: string): Promise<Result<unknown>> {
+        const procedureQuery = SqlManager.getSqlQueries(dataSource.getType())!.preview.databaseObject.procedure;
+        return ConnectionManager.prepare(dataSource, procedureQuery, false).then(preparedStatement => {
+            preparedStatement.bind('procedureName', procedureName);
+            return preparedStatement.execute();
+        });
+    }
 }
