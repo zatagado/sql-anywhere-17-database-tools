@@ -1,4 +1,6 @@
 const esbuild = require("esbuild");
+const fs = require("fs");
+const path = require("path");
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
@@ -23,6 +25,37 @@ const esbuildProblemMatcherPlugin = {
 	},
 };
 
+/**
+ * Shims @mapbox/node-pre-gyp so odbc's JS can be bundled without
+ * pulling in 60+ transitive dependencies. The native .node binary
+ * is copied to dist/ and resolved at runtime via __dirname.
+ * @type {import('esbuild').Plugin}
+ */
+const nativeModulePlugin = {
+	name: 'native-module',
+
+	setup(build) {
+		build.onResolve({ filter: /^@mapbox\/node-pre-gyp$/ }, () => ({
+			path: 'node-pre-gyp',
+			namespace: 'node-pre-gyp-shim',
+		}));
+		build.onLoad({ filter: /.*/, namespace: 'node-pre-gyp-shim' }, () => ({
+			contents: `
+				const path = require('path');
+				exports.find = function() {
+					return path.join(__dirname, 'odbc.node');
+				};
+			`,
+			loader: 'js',
+		}));
+		build.onEnd(() => {
+			const src = path.join(__dirname, 'node_modules', 'odbc', 'lib', 'bindings', 'napi-v8', 'odbc.node');
+			const dest = path.join(__dirname, 'dist', 'odbc.node');
+			fs.copyFileSync(src, dest);
+		});
+	},
+};
+
 async function main() {
 	const ctx = await esbuild.context({
 		entryPoints: [
@@ -35,10 +68,10 @@ async function main() {
 		sourcesContent: false,
 		platform: 'node',
 		outfile: 'dist/extension.js',
-		external: ['vscode', 'odbc'],
+		external: ['vscode'],
 		logLevel: 'silent',
 		plugins: [
-			/* add to the end of plugins array */
+			nativeModulePlugin,
 			esbuildProblemMatcherPlugin,
 		],
 	});

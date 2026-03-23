@@ -40,22 +40,20 @@ export function activate(context: vscode.ExtensionContext) {
 
     // context.subscriptions.push(webview);
 
-    // TODO add the subscriptions in the file, like with databaseObjectView
     const databaseTreeProvider = new databaseTree.DatabaseTree(context);
-    vscode.window.registerTreeDataProvider('databaseTree', databaseTreeProvider);
-    vscode.commands.registerCommand('databaseTree.addDatasource', 
-        () => datasourcePick.selectDatasource(context).then(dataSource => {
-            if (dataSource) {
-                databaseTreeProvider.addDatabase(dataSource);
-            }
-        }));
-    vscode.commands.registerCommand('_databaseTree.removeDatasource', (node: databaseTree.DatabaseItem) => 
-        databaseTreeProvider.removeDatabase(node));
-    vscode.commands.registerCommand('databaseTree.refresh', () => databaseTreeProvider.refresh());
-    vscode.commands.registerCommand('sql-anywhere-17-database-tools.removeDatasource',
-        () => datasourcePick.removeDatasource(context));
-    
     context.subscriptions.push(
+        vscode.window.registerTreeDataProvider('databaseTree', databaseTreeProvider),
+        vscode.commands.registerCommand('databaseTree.addDatasource',
+            () => datasourcePick.selectDatasource(context).then(dataSource => {
+                if (dataSource) {
+                    databaseTreeProvider.addDatabase(dataSource);
+                }
+            })),
+        vscode.commands.registerCommand('_databaseTree.removeDatasource', (node: databaseTree.DatabaseItem) =>
+            databaseTreeProvider.removeDatabase(node)),
+        vscode.commands.registerCommand('databaseTree.refresh', () => databaseTreeProvider.refresh()),
+        vscode.commands.registerCommand('sql-anywhere-17-database-tools.removeDatasource',
+            () => datasourcePick.removeDatasource(context)),
         ...databaseObjectView.activate()
     );
 }

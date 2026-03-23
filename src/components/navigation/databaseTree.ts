@@ -170,7 +170,7 @@ export class TypesItem extends DatabaseTreeItem {
     async getChildren(): Promise<ObjectItem[]> {
         switch (this.type) {
             case DatabaseObjectType.Table: {
-                const rows = await DatabaseTreeRest.getTables(this.parentNode.dataSource, 10000, 0);
+                const rows = await DatabaseTreeRest.getTables(this.parentNode.dataSource, 100000, 0);
                 return rows.map((row => {
                     const table = row as { TableName: string };
                     return new ObjectItem(
@@ -189,7 +189,7 @@ export class TypesItem extends DatabaseTreeItem {
                 }));
             }
             case DatabaseObjectType.View: {
-                const rows = await DatabaseTreeRest.getViews(this.parentNode.dataSource, 10000, 0);
+                const rows = await DatabaseTreeRest.getViews(this.parentNode.dataSource, 100000, 0);
                 return rows.map((row => {
                     const view = row as { ViewName: string };
                     return new ObjectItem(
@@ -208,7 +208,7 @@ export class TypesItem extends DatabaseTreeItem {
                 }));
             }
             case DatabaseObjectType.Procedure: {
-                const rows = await DatabaseTreeRest.getProcedures(this.parentNode.dataSource, 10000, 0);
+                const rows = await DatabaseTreeRest.getProcedures(this.parentNode.dataSource, 100000, 0);
                 return rows.map((row => {
                     const procedure = row as { ProcedureName: string };
                     return new ObjectItem(
