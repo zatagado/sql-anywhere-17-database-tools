@@ -1,52 +1,59 @@
 import {
+    ConnectionManager
+} from '../../manager/connectionManager';
+import {
     DatabaseObjectViewRest
 } from '../../rest/preview/databaseObjectViewRest';
 import {
+    DatabaseObjectType,
     ObjectItem
 } from '../navigation/databaseTree';
 import {
     commands,
-    Event,
+    Disposable,
     EventEmitter,
-    ExtensionContext,
     TextDocumentContentProvider,
     Uri,
     window,
     workspace
 } from 'vscode';
 
-export function databaseObjectVirtualDocument(context: ExtensionContext) {
-    context.subscriptions.push(workspace.registerTextDocumentContentProvider('virtualSQL', new DatabaseObjectVirtualDocument()));
+export function activate(): Disposable[] {
+    class ViewProvider implements TextDocumentContentProvider {
+        static readonly scheme = 'virtualViewSQL';
 
-    context.subscriptions.push(commands.registerCommand('sql-anywhere-17-database-tools.openVirtualDocument', async () => {
-        const what = await window.showInputBox({ placeHolder: 'Test SQL Virtual Document' });
-        if (what) {
-            const uri = Uri.parse(`virtualSQL:${what}.sql`);
-            const doc = await workspace.openTextDocument(uri);
-            await window.showTextDocument(doc, { preview: false });
+        _onDidChangeEmitter = new EventEmitter<Uri>();
+        onDidChange = this._onDidChangeEmitter.event;
+
+        async provideTextDocumentContent(uri: Uri): Promise<string> {
+            // Example uri: virtualViewSQL:databaseName/viewName.sql
+            const parts = uri.path.split('/');
+            // Get the database name
+            const databaseName = parts[0];
+            // Get the view name without the .sql extension
+            const viewName = parts[1].substring(0, parts[1].length - 4);
+            const view = (await DatabaseObjectViewRest.getView(ConnectionManager.getDataSource(databaseName)!, viewName))[0] as { ViewDefinition: string };
+            return view.ViewDefinition; 
         }
-    }));
-}
-
-export async function viewObject(node: ObjectItem) {
-    // TODO use the rest function to get the content of the object
-    const view = await DatabaseObjectViewRest.getView(node.parentNode.parentNode.dataSource, node.label as string);
-    // show text document.
-}
-
-// export function openDatabaseObjectVirtualDocument(dataSource: DataSource, objectName: string, objectType: )
-
-export class DatabaseObjectVirtualDocument implements TextDocumentContentProvider {
-
-    private _onDidChangeEmitter: EventEmitter<Uri> = new EventEmitter<Uri>();
-    readonly onDidChange: Event<Uri> = this._onDidChangeEmitter.event;
-
-    provideTextDocumentContent(uri: Uri): string {
-        return this.showVirtualSql({ text: uri.path });
     }
 
-    private showVirtualSql(options: { text: string }): string {
-        const { text } = options;
-        return text;
+    async function openView(node: ObjectItem) {
+        const uri = Uri.parse(`${ViewProvider.scheme}:${node.getDataSource().getName()}/${node.label}.sql`);
+        const doc = await workspace.openTextDocument(uri);
+        await window.showTextDocument(doc, { preview: false });
     }
+
+    async function openObjectItem(node: ObjectItem) {
+        switch (node.getType()) {
+            case DatabaseObjectType.View:
+                return openView(node);
+            default:
+                return;
+        }
+    }
+        
+    const subscriptions: Disposable[] = [];
+    subscriptions.push(workspace.registerTextDocumentContentProvider(ViewProvider.scheme, new ViewProvider()));
+    subscriptions.push(commands.registerCommand('databaseObjectView.open', (node: ObjectItem) => openObjectItem(node)));
+    return subscriptions;
 }
