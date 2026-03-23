@@ -10,8 +10,8 @@
     "preview": {
         "databaseObject": {
             "table": "CALL sa_get_table_definition( $tableOwner, $tableName )",
-            "view": "SELECT viewtext AS Definition FROM SYS.SYSVIEWS WHERE STRING(vcreator, '.', viewname) = $qualifiedName",
-            "procedure": "SELECT proc_defn AS Definition FROM SYS.SYSPROCEDURE p INNER JOIN SYS.SYSUSER u ON p.creator = u.user_id WHERE STRING(u.user_name, '.', p.proc_name) = $qualifiedName"
+            "view": "SELECT viewtext AS ViewDefinition FROM SYS.SYSVIEWS WHERE STRING(vcreator, '.', viewname) = $viewName",
+            "procedure": "SELECT proc_defn AS ProcedureDefinition FROM SYS.SYSPROCEDURE INNER JOIN SYS.SYSUSER ON SYSPROCEDURE.creator = SYSUSER.user_id WHERE STRING(SYSUSER.user_name, '.', SYSPROCEDURE.proc_name) = $procedureName"
         }
     }
 }
