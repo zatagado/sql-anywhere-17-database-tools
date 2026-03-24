@@ -82,15 +82,8 @@ export class ConnectionManager {
             this.updateRecentStack(dataSource);
         }
         return dataSource.getConnection().then(connection =>
-            connection.query(query).then(
-                result => {
-                    connection.close();
-                    return result;
-                },
-                err => {
-                    connection.close();
-                    throw err;
-                }
+            connection.query(query).catch(() =>
+                dataSource.reconnect().then(newConnection => newConnection.query(query))
             )
         );
     }

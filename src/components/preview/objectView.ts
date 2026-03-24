@@ -55,13 +55,13 @@ export function activate(): Disposable[] {
     async function openView(node: ObjectItem) {
         const uri = Uri.parse(`${ViewProvider.scheme}:${node.getDataSource().getName()}/${node.label}.sql`);
         const doc = await workspace.openTextDocument(uri);
-        await window.showTextDocument(doc, { preview: false });
+        await window.showTextDocument(doc, { preview: true });
     }
 
     async function openProcedure(node: ObjectItem) {
         const uri = Uri.parse(`${ProcedureProvider.scheme}:${node.getDataSource().getName()}/${node.label}.sql`);
         const doc = await workspace.openTextDocument(uri);
-        await window.showTextDocument(doc, { preview: false });
+        await window.showTextDocument(doc, { preview: true });
     }
 
     async function openObjectItem(node: ObjectItem) {
