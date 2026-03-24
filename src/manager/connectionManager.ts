@@ -70,7 +70,11 @@ export class ConnectionManager {
         if (updateRecent) {
             this.updateRecentStack(dataSource);
         }
-        return dataSource.getConnection().then(connection => PreparedStatement.create(connection, query));
+        return dataSource.getConnection().then(connection =>
+            PreparedStatement.create(connection, query).catch(() =>
+                dataSource.reconnect().then(newConnection => PreparedStatement.create(newConnection, query))
+            )
+        );
     }
 
     static execute(dataSource: DataSource, query: string, updateRecent: boolean = true): Promise<odbc.Result<unknown>> {
@@ -94,9 +98,12 @@ export class ConnectionManager {
 }
 
 export class DataSource {
+    private static readonly MAX_RECONNECT_ATTEMPTS = 3;
+    private static readonly RECONNECT_DELAY_MS = 1000;
+
     private name: string;
     private type: string;
-    private pool!: odbc.Pool;
+    private pool?: odbc.Pool;
 
     constructor(name: string, type: string) {
         this.name = name;
@@ -105,18 +112,47 @@ export class DataSource {
 
     private async getPool(): Promise<odbc.Pool> {
         if (this.pool) {
-            return Promise.resolve(this.pool);
+            return this.pool;
         }
-        else {
-            return odbc.pool(`DSN=${this.name}`).then(pool => {
-                this.pool = pool;
-                return pool;
-            });
+        const pool = await odbc.pool(`DSN=${this.name}`);
+        this.pool = pool;
+        return pool;
+    }
+
+    private async disposePool(): Promise<void> {
+        if (this.pool === undefined) {
+            return;
         }
+        try {
+            await this.pool.close();
+        } catch {
+            // ignore close errors on teardown
+        }
+        this.pool = undefined;
     }
 
     isConnected(): boolean {
         return this.pool !== undefined;
+    }
+
+    async reconnect(): Promise<odbc.Connection> {
+        await this.disposePool();
+
+        for (let attempt = 0; attempt < DataSource.MAX_RECONNECT_ATTEMPTS; attempt++) {
+            if (attempt > 0) {
+                await new Promise(resolve => setTimeout(resolve, DataSource.RECONNECT_DELAY_MS));
+            }
+            try {
+                const pool = await this.getPool();
+                const connection = await pool.connect();
+                return connection;
+            } catch (err) {
+                await this.disposePool();
+            }
+        }
+
+        throw new Error(`Failed to reconnect to datasource "${this.name}"
+            after ${DataSource.MAX_RECONNECT_ATTEMPTS} attempts`);
     }
 
     getConnection(): Promise<odbc.Connection> {
@@ -147,12 +183,8 @@ export class PreparedStatement {
     static create(connection: odbc.Connection, query: string): Promise<PreparedStatement> {
         return connection.createStatement().then(statement => {
             const preparedStatement = new PreparedStatement(statement, query);
-            return preparedStatement.prepare(query).then(() => preparedStatement);
+            return preparedStatement.statement.prepare(query.replace(/\$\w+/gm, '?')).then(() => preparedStatement);
         });
-    }
-
-    private prepare(query: string): Promise<void> {
-        return this.statement.prepare(query.replace(/\$\w+/gm, '?'));
     }
 
     bind(parameter: string, value: any) {
@@ -164,22 +196,22 @@ export class PreparedStatement {
     }
 
     execute(): Promise<odbc.Result<unknown>> {
-        if (Array.from(this.parameters.values()).every(parameterData => parameterData.value !== undefined)) {
-            return this.statement.bind(Array.from(this.parameters.values()).sort(
-                (a, b) => a.position - b.position).map(parameterData => parameterData.value)).then(
-                    () => this.statement.execute().then(
-                        result => {
-                            this.statement.close(); // TODO not sure if closing is necessary, or at the end and add explicit close method to prepared statement class
-                            return result;
-                        },
-                        err => {
-                            this.statement.close();
-                            throw err;
-                        }
-                    ));
-        }
-        else {
+        if (Array.from(this.parameters.values()).some(parameterData => parameterData.value === undefined)) {
             throw new Error('Not all parameters are bound');
         }
+
+        return this.statement.bind(Array.from(this.parameters.values()).sort(
+            (a, b) => a.position - b.position).map(parameterData => parameterData.value)).then(
+                () => this.statement.execute().then(
+                    result => {
+                        this.statement.close(); // TODO not sure if closing is necessary, or at the end and add explicit close method to prepared statement class
+                        return result;
+                    },
+                    err => {
+                        this.statement.close();
+                        throw err;
+                    }
+                )
+            );
     }
 }
