@@ -3,12 +3,14 @@
     "navigation": {
         "databaseTree": {
             "tables": "SELECT TABLE_NAME AS TableName FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE' LIMIT $limit OFFSET $offset;",
-            "views": "SELECT TABLE_NAME AS ViewName FROM information_schema.views WHERE table_schema = DATABASE() LIMIT $limit OFFSET $offset;"
+            "views": "SELECT TABLE_NAME AS ViewName FROM information_schema.views WHERE table_schema = DATABASE() LIMIT $limit OFFSET $offset;",
+            "procedures": "SELECT ROUTINE_NAME AS ProcedureName FROM information_schema.routines WHERE routine_schema = DATABASE() AND routine_type = 'PROCEDURE' LIMIT $limit OFFSET $offset;"
         }
     },
     "preview": {
         "databaseObject": {
-            "view": "SELECT VIEW_DEFINITION AS ViewDefinition FROM information_schema.views WHERE table_schema = DATABASE() AND table_name = $viewName;"
+            "view": "SELECT VIEW_DEFINITION AS ViewDefinition FROM information_schema.views WHERE table_schema = DATABASE() AND table_name = $viewName;",
+            "procedure": "SELECT ROUTINE_DEFINITION AS ProcedureDefinition FROM information_schema.routines WHERE routine_schema = DATABASE() AND routine_name = $procedureName;"
         }
     }
 }
