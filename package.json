@@ -31,11 +31,11 @@
                 }
             },
             {
-                "command": "sql-anywhere-17-database-tools.edit",
-                "title": "Edit",
+                "command": "sql-anywhere-17-database-tools.execute",
+                "title": "Execute",
                 "icon": {
-                    "light": "resources/light/edit.svg",
-                    "dark": "resources/dark/edit.svg"
+                    "light": "resources/light/execute.svg",
+                    "dark": "resources/dark/execute.svg"
                 }
             },
             {
@@ -56,8 +56,8 @@
             ],
             "editor/title": [
                 {
-                    "command": "sql-anywhere-17-database-tools.edit",
-                    "when": "editorLangId == sql",
+                    "command": "sql-anywhere-17-database-tools.execute",
+                    "when": "editorLangId == sql && !editorReadonly",
                     "group": "navigation"
                 }
             ],
