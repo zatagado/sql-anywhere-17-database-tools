@@ -60,6 +60,7 @@ export class ConnectionManager {
         if (this.stack.some(otherDataSource => 
             otherDataSource.getName() === dataSource.getName() && otherDataSource.getType() === dataSource.getType())) {
             this.stack = this.stack.filter(otherDataSource => otherDataSource.getName() !== dataSource.getName());
+            this.stack.push(dataSource);
         }
         else {
             throw new Error(`DataSource ${dataSource.getName()} not found in stack`);
@@ -96,7 +97,7 @@ export class DataSource {
 
     private name: string;
     private type: string;
-    private pool?: odbc.Pool;
+    private pool?: Promise<odbc.Pool>;
 
     constructor(name: string, type: string) {
         this.name = name;
@@ -104,12 +105,8 @@ export class DataSource {
     }
 
     private async getPool(): Promise<odbc.Pool> {
-        if (this.pool) {
-            return this.pool;
-        }
-        const pool = await odbc.pool(`DSN=${this.name}`);
-        this.pool = pool;
-        return pool;
+        this.pool = this.pool ?? odbc.pool(`DSN=${this.name}`);
+        return this.pool;
     }
 
     private async disposePool(): Promise<void> {
@@ -117,7 +114,7 @@ export class DataSource {
             return;
         }
         try {
-            await this.pool.close();
+            await (await this.pool).close();
         } catch {
             // ignore close errors on teardown
         }

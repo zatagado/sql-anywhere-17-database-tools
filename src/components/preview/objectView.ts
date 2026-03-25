@@ -32,8 +32,8 @@ export function activate(): Disposable[] {
             const databaseName = parts[0];
             // Get the view name without the .sql extension
             const viewName = parts[1].substring(0, parts[1].length - 4);
-            const view = (await DatabaseObjectViewRest.getView(ConnectionManager.getDataSource(databaseName)!, viewName))[0] as { ViewDefinition: string };
-            return view.ViewDefinition; 
+            return DatabaseObjectViewRest.getView(ConnectionManager.getDataSource(databaseName)!, viewName).then(
+                result => result[0] as { ViewDefinition: string }).then(view => view.ViewDefinition);
         }
     }
 
