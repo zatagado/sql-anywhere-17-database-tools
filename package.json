@@ -45,6 +45,10 @@
             {
                 "command": "sql-anywhere-17-database-tools.removeDatasource",
                 "title": "Remove Datasource"
+            },
+            {
+                "command": "sql-anywhere-17-database-tools.vue",
+                "title": "Open Vue Webview"
             }
         ],
         "menus": {
