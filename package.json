@@ -45,6 +45,14 @@
             {
                 "command": "sql-anywhere-17-database-tools.removeDatasource",
                 "title": "Remove Datasource"
+            },
+            {
+                "command": "sql-anywhere-17-database-tools.results",
+                "title": "Open Results Webview"
+            },
+            {
+                "command": "sql-anywhere-17-database-tools.test",
+                "title": "Open Test Webview"
             }
         ],
         "menus": {

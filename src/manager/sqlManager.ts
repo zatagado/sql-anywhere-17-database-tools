@@ -22,6 +22,9 @@ export interface Sql {
     };
 }
 
+// schema
+// (1) [{…}, statement: 'select * from persons;', parameters: Array(0), return: undefined, count: 1, columns: Array(3)]
+
 export class SqlManager {
 
     private static context: ExtensionContext;

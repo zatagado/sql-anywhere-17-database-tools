@@ -1,96 +1,112 @@
-import { ConnectionManager, DataSource } from '../../manager/connectionManager';
+import {
+    commands,
+    Disposable,
+    ExtensionContext,
+    ViewColumn,
+    Uri,
+    WebviewPanel,
+    window
+} from 'vscode';
+import { ConnectionManager } from '../../manager/connectionManager';
 import { ResultsRest } from '../../rest/results/resultsRest';
-import { commands, Disposable, window } from 'vscode';
-import type { Result } from 'odbc';
 
-function resolveDataSource(): DataSource | undefined {
-    const sources = ConnectionManager.getDataSources();
-    if (sources.length === 0) {
-        window.showErrorMessage('No datasource configured. Add a datasource first.');
-        return undefined;
-    }
-    return sources[0];
+function getResultsWebviewHtml(panel: WebviewPanel, extensionUri: Uri): string {
+    const scriptSrc = panel.webview.asWebviewUri(Uri.joinPath(extensionUri, 'web', 'dist', 'assets', 'index.js'));
+    const cssSrc = panel.webview.asWebviewUri(Uri.joinPath(extensionUri, 'web', 'dist', 'assets', 'index.css'));
+
+    return `<!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <link rel="stylesheet" href="${cssSrc}" />
+            </head>
+            <body>
+                <noscript>You need to enable JavaScript to run this app.</noscript>
+                <div id="app"></div>
+                <script>
+                    const vscode = acquireVsCodeApi();
+                    window.__vscodeApi__ = vscode;
+                    window.__VSCODE_WEBVIEW_VIEW__ = 'queryResults';
+                    window.addEventListener('load', function () {
+                        vscode.postMessage({ type: 'onWebviewReady' });
+                    });
+                </script>
+                <script type="module" src="${scriptSrc}"></script>
+            </body>
+            </html>`;
 }
 
-/** Prefer ODBC diagnostic records; `Error.message` is often only "[odbc] Error executing the sql statement". */
-function formatOdbcExecutionError(err: unknown): string {
-    if (err instanceof Error && 'odbcErrors' in err) {
-        const odbcErrors = (err as Error & { odbcErrors?: Array<{ state: string; message: string; code: number }> })
-            .odbcErrors;
-        if (odbcErrors && odbcErrors.length > 0) {
-            return odbcErrors
-                .map(e => `[${e.state}] ${e.message}`.trim())
-                .join('; ');
-        }
-    }
-    if (err instanceof Error) {
-        return err.message;
-    }
-    return String(err);
-}
+// export function activate(context: ExtensionContext): Disposable[] {
 
-function formatQueryResult(result: Result<unknown>): string {
-    const lines: string[] = [];
-    lines.push(`${result.count} row(s)`);
-    if (result.length === 0) {
-        return lines.join('\n');
-    }
-    const columnNames =
-        result.columns?.map(c => c.name) ??
-        (typeof result[0] === 'object' && result[0] !== null
-            ? Object.keys(result[0] as object)
-            : []);
-    lines.push(columnNames.join('\t'));
-    for (const row of result) {
-        if (typeof row === 'object' && row !== null && !Array.isArray(row)) {
-            const r = row as Record<string, unknown>;
-            lines.push(columnNames.map(c => String(r[c] ?? '')).join('\t'));
-        }
-        else {
-            lines.push(String(row));
-        }
-    }
-    return lines.join('\n');
-}
+//     function resultsView() {
+//         const panel = window.createWebviewPanel('webview', 'Vue', ViewColumn.One, {
+//             enableScripts: true
+//         });
 
-export function activate(): Disposable[] {
-    const outputChannel = window.createOutputChannel('SQL Anywhere results');
+//         panel.webview.html = getResultsWebviewHtml(panel, context.extensionUri);
 
-    async function runSqlFromActiveEditor(): Promise<void> {
+//         const messageSub = panel.webview.onDidReceiveMessage((message: { type?: string; message?: string } & Record<string, unknown>) => {
+//             switch (message.type) {
+//                 case 'onWebviewReady':
+//                     console.log('[results webview] ready');
+//                     panel.webview.postMessage({ type: 'extension-ack', message: 'Extension received onWebviewReady' });
+//                     break;
+//                 case 'logFromVue':
+//                     console.log('[results webview] from Vue:', message.message ?? message);
+//                     break;
+//                 default:
+//                     console.log('[results webview]', message);
+//             }
+//         });
+//         panel.onDidDispose(() => messageSub.dispose());
+//     }
+
+//     return [commands.registerCommand('sql-anywhere-17-database-tools.results', resultsView)];
+// }
+
+
+// TODO make a class to keep track of the results views and their editors. if an existing editor is passed in, clear all unused panels for that editor.
+// TODO make it a map of the full path of the file to the panel.
+
+export function activate(context: ExtensionContext): Disposable[] {
+
+    function resultsView() {
+        // TODO depending on the number of queries, create multiple panels
         const editor = window.activeTextEditor;
-        if (!editor || editor.document.languageId !== 'sql') {
-            window.showWarningMessage('Open a SQL editor to run SQL.');
+        if (!editor) {
             return;
         }
 
-        const sql = editor.document.getText().trim();
-        if (!sql) {
-            window.showWarningMessage('The SQL document is empty.');
-            return;
-        }
-
-        const dataSource = resolveDataSource();
+        const document = editor.document;
+        const file = Uri.file(document.fileName);
+        const shortName = file.path.split('/').pop();
+        // TODO get the short name. if it already exists, change both panel titles to the workspace relative path.
+        const queries: string = document.getText(editor.selection.isEmpty ? undefined : editor.selection);
+        
+        const dataSource = ConnectionManager.getDataSources()[0];
         if (!dataSource) {
             return;
         }
+        const panelTitle = `${dataSource.getName()} - ${shortName}`;
+        // TODO figure out where the viewcolumn should be based on the document position.
+        const panel = window.createWebviewPanel('webview', panelTitle, ViewColumn.One, {
+            enableScripts: true,
+            retainContextWhenHidden: true
+        });
 
-        try {
-            const result = await ResultsRest.executeScript(dataSource, sql);
-            outputChannel.clear();
-            outputChannel.appendLine(`-- ${dataSource.getName()} (${dataSource.getType()})`);
-            outputChannel.appendLine('');
-            outputChannel.appendLine(formatQueryResult(result));
-            outputChannel.show(true);
-        } catch (err) {
-            const message = formatOdbcExecutionError(err);
-            window.showErrorMessage(`SQL execution failed: ${message}`);
-            outputChannel.clear();
-            outputChannel.appendLine('SQL execution failed');
-            outputChannel.appendLine(message);
-            outputChannel.show(true);
-            console.error('[results.runSqlFromActiveEditor]', err);
-        }
+        panel.webview.html = getResultsWebviewHtml(panel, context.extensionUri);
+
+        ResultsRest.executeScript(dataSource, queries).then(result => {
+            panel.webview.postMessage({
+                type: 'onQueryResult',
+                rows: result,
+                columns: result.columns,
+                count: result.count,
+                statement: result.statement,
+                return: result.return,
+                parameters: result.parameters
+            });
+        });
     }
 
-    return [commands.registerCommand('sql-anywhere-17-database-tools.execute', runSqlFromActiveEditor), outputChannel];
+    return [commands.registerCommand('sql-anywhere-17-database-tools.execute', resultsView)];
 }

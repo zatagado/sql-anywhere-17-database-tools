@@ -88,7 +88,6 @@ export class ConnectionManager {
             )
         );
     }
-        
 }
 
 export class DataSource {
