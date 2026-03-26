@@ -1,14 +1,14 @@
 <script setup lang="ts">
+import { ColumnDefinition } from 'odbc';
 defineProps({
-    value: {
-        type: String,
-        required: true
-    }
+    column: ColumnDefinition
 })
 </script>
 
 <template>
-    <th>{{ value }}</th>
+    <th 
+        class="border border-gray-300"
+    >{{ column!.name }}</th>
 </template>
 
 <style scoped></style>

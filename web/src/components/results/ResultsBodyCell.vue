@@ -8,7 +8,7 @@ defineProps({
 </script>
 
 <template>
-  <td>{{ value }}</td>
+  <td class="border border-gray-300">{{ value }}</td>
 </template>
 
 <style scoped></style>

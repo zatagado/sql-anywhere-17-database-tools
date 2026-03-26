@@ -14,7 +14,9 @@ export function activate(context: vscode.ExtensionContext) {
     sqlManager.SqlManager.load(context);
     connectionManager.ConnectionManager.load(context);
 
-    resultsRest.ResultsRest.executeTest(connectionManager.ConnectionManager.getDataSources()[0]);
+    resultsRest.ResultsRest.executeTest(connectionManager.ConnectionManager.getDataSources()[0]).then(schema => {
+        debugger;
+    });
 
     const databaseTreeProvider = new databaseTree.DatabaseTree(context);
     context.subscriptions.push(

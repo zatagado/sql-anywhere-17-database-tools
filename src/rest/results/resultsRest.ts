@@ -7,6 +7,6 @@ export class ResultsRest {
     }
 
     static executeTest(dataSource: DataSource): Promise<Result<unknown>> {
-        return ConnectionManager.execute(dataSource, 'select * from lcp.fgmodel', true);
+        return ConnectionManager.execute(dataSource, 'select * from persons;', true);
     }
 }
