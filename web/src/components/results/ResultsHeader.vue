@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { ColumnDefinition } from 'odbc';
+import type { ColumnDefinition } from 'odbc';
 import ResultsHeaderCell from './ResultsHeaderCell.vue';
-defineProps({
-    columns: Array<ColumnDefinition>
-})
+defineProps<{
+    columns: ColumnDefinition[]
+}>()
 </script>
 
 <template>
     <thead>
         <tr>
-            <ResultsHeaderCell v-for="column in columns" :key="column.name" :value="column.name" />
+            <ResultsHeaderCell v-for="column in columns" :key="column.name" :column="column" />
         </tr>
     </thead>
 </template>

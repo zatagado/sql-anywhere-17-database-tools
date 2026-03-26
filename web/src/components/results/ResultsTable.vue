@@ -1,20 +1,6 @@
 <script setup lang="ts">
 import ResultsHeader from './ResultsHeader.vue';
 import ResultsBody from './ResultsBody.vue';
-defineProps({})
-
-// const header = [
-//     'id',
-//     'name',
-//     'value',
-// ]
-
-// const body = [
-//     [1, 'John Doe', 100],
-//     [2, 'Jane Doe', 200],
-//     [3, 'John Doe', 340],
-// ]
-
 import type { Result } from 'odbc';
 
 /** ODBC `Result` extends `Array`; mock it with a real array plus metadata so `v-for` and typings match. */
@@ -39,7 +25,7 @@ const table = Object.assign(tableRows, {
 <template>
     <table class="border border-separate border-gray-300 min-w-full">
         <ResultsHeader :columns="table.columns" />
-        <ResultsBody :rows="table" />
+        <ResultsBody :queryResult="table" />
     </table>
 </template>
 

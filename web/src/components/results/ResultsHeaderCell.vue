@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ColumnDefinition } from 'odbc';
-defineProps({
+import type { ColumnDefinition } from 'odbc';
+defineProps<{
     column: ColumnDefinition
-})
+}>()
 </script>
 
 <template>

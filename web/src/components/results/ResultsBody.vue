@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import ResultsBodyRow from './ResultsBodyRow.vue';
-import { Result } from 'odbc';
-defineProps({
-    rows: Result<unknown>
-})
+import type { Result } from 'odbc';
+defineProps<{
+    queryResult: Result<unknown>
+}>()
 </script>
 
 <template>
     <tbody>
-        <ResultsBodyRow v-for="(row, index) in rows" :key="index" :columns="rows!.columns" :row="row" />
+        <!-- @vue-ignore -->
+        <ResultsBodyRow v-for="(row, index) in queryResult" :key="index" :columns="queryResult!.columns" :row="row" />
     </tbody>
 </template>
 

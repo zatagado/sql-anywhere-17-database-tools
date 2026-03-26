@@ -28,7 +28,7 @@ function getResultsWebviewHtml(panel: WebviewPanel, extensionUri: Uri): string {
                         vscode.postMessage({ type: 'onWebviewReady' });
                     });
                 </script>
-                <script src="${scriptSrc}"></script>
+                <script type="module" src="${scriptSrc}"></script>
             </body>
             </html>`;
 }
