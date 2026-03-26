@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ResultsBodyRow from './ResultsBodyRow1.vue';
+import ResultsBodyRow from './ResultsBodyRow.vue';
 defineProps({
     rows: Array<Array<string | number>>
 })

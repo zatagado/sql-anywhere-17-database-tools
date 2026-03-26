@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ResultsBodyCell from './ResultsBodyCell1.vue';
+import ResultsBodyCell from './ResultsBodyCell.vue';
 defineProps({
     row: Array<string | number>
 })

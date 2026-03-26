@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import ResultsHeader from './ResultsHeader1.vue';
-import ResultsBody from './ResultsBody1.vue';
+import ResultsHeader from './ResultsHeader.vue';
+import ResultsBody from './ResultsBody.vue';
 defineProps({})
 
 const header = [
@@ -18,7 +18,7 @@ const body = [
 
 <template>
     <table>
-        <ResultsHeader :cells="header" />
+        <ResultsHeader :columns="header" />
         <ResultsBody :rows="body" />
     </table>
 </template>
