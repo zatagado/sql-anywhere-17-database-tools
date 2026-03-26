@@ -8,7 +8,7 @@ import {
     window
 } from 'vscode';
 
-function getResultsWebviewHtml(panel: WebviewPanel, extensionUri: Uri): string {
+function getTestWebviewHtml(panel: WebviewPanel, extensionUri: Uri): string {
     const scriptSrc = panel.webview.asWebviewUri(Uri.joinPath(extensionUri, 'web', 'dist', 'assets', 'index.js'));
     const cssSrc = panel.webview.asWebviewUri(Uri.joinPath(extensionUri, 'web', 'dist', 'assets', 'index.css'));
 
@@ -23,7 +23,7 @@ function getResultsWebviewHtml(panel: WebviewPanel, extensionUri: Uri): string {
                 <script>
                     const vscode = acquireVsCodeApi();
                     window.__vscodeApi__ = vscode;
-                    window.__VSCODE_WEBVIEW_VIEW__ = 'queryResults';
+                    window.__VSCODE_WEBVIEW_VIEW__ = 'test';
                     window.addEventListener('load', function () {
                         vscode.postMessage({ type: 'onWebviewReady' });
                     });
@@ -35,28 +35,28 @@ function getResultsWebviewHtml(panel: WebviewPanel, extensionUri: Uri): string {
 
 export function activate(context: ExtensionContext): Disposable[] {
 
-    function resultsView() {
+    function testView() {
         const panel = window.createWebviewPanel('webview', 'Vue', ViewColumn.One, {
             enableScripts: true
         });
 
-        panel.webview.html = getResultsWebviewHtml(panel, context.extensionUri);
+        panel.webview.html = getTestWebviewHtml(panel, context.extensionUri);
 
         const messageSub = panel.webview.onDidReceiveMessage((message: { type?: string; message?: string } & Record<string, unknown>) => {
             switch (message.type) {
                 case 'onWebviewReady':
-                    console.log('[results webview] ready');
+                    console.log('[test webview] ready');
                     panel.webview.postMessage({ type: 'extension-ack', message: 'Extension received onWebviewReady' });
                     break;
                 case 'logFromVue':
-                    console.log('[results webview] from Vue:', message.message ?? message);
+                    console.log('[test webview] from Vue:', message.message ?? message);
                     break;
                 default:
-                    console.log('[results webview]', message);
+                    console.log('[test webview]', message);
             }
         });
         panel.onDidDispose(() => messageSub.dispose());
     }
 
-    return [commands.registerCommand('sql-anywhere-17-database-tools.results', resultsView)];
+    return [commands.registerCommand('sql-anywhere-17-database-tools.test', testView)];
 }

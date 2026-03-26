@@ -1,14 +1,20 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import QueryResults from './components/results/QueryResults.vue'
+import Test from './components/results/Test.vue'
+
+type WebviewView = 'queryResults' | 'test'
+
+function getWebviewView(): WebviewView {
+  const v = window.__VSCODE_WEBVIEW_VIEW__
+  return v === 'test' ? 'test' : 'queryResults'
+}
+
+const view = getWebviewView()
+</script>
 
 <template>
-  <div class="bg-gradient-to-r from-blue-600 to-purple-500 p-10">
-    <p class="text-white/80 text-xl font-semibold">
-      Lorem ipsum dolor sit amet consectetur adipisicing elit. Ea, explicabo
-      doloremque deserunt, voluptates, fugiat dolorem consectetur odio autem
-      quas ipsa veniam ducimus necessitatibus exercitationem numquam assumenda
-      natus beatae sed velit!
-    </p>
-  </div>
+  <QueryResults v-if="view === 'queryResults'" />
+  <Test v-else />
 </template>
 
 <style scoped></style>
