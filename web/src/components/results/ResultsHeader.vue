@@ -9,6 +9,7 @@ defineProps<{
 <template>
     <thead>
         <tr>
+            <th class="bg-gray-500 sticky top-0"></th>
             <ResultsHeaderCell v-for="column in columns" :key="column.name" :column="column" />
         </tr>
     </thead>

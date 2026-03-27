@@ -8,7 +8,9 @@ defineProps({
 </script>
 
 <template>
-  <td class="border border-gray-300">{{ value }}</td>
+    <td class="border border-gray-300 ">
+        <span class="truncate">{{ value }}</span>
+    </td>
 </template>
 
 <style scoped></style>

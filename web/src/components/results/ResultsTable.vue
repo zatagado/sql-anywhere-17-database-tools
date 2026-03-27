@@ -5,8 +5,38 @@ import type { Result } from 'odbc';
 
 /** ODBC `Result` extends `Array`; mock it with a real array plus metadata so `v-for` and typings match. */
 const tableRows = [
-    { PersonId: 1, FirstName: 'Zach', LastName: 'Gaydos' },
+    { PersonId: 1, FirstName: 'Luthen', LastName: 'Rael' },
     { PersonId: 2, FirstName: 'Cassian', LastName: 'Andor' },
+    { PersonId: 3, FirstName: 'Leia', LastName: 'Organa' },
+    { PersonId: 4, FirstName: 'Han', LastName: 'Solo' },
+    { PersonId: 5, FirstName: 'Luke', LastName: 'Skywalker' },
+    { PersonId: 6, FirstName: 'Ben', LastName: 'Solo' },
+    { PersonId: 7, FirstName: 'Boba', LastName: 'Fett' },
+    { PersonId: 8, FirstName: 'Jabba', LastName: 'Hutt' },
+    { PersonId: 9, FirstName: 'Darth', LastName: 'Vader' },
+    { PersonId: 10, FirstName: 'This is an extremely long first name that should be truncated by ellipsis in the table cell. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ', LastName: 'Palpatine' },
+    { PersonId: 11, FirstName: 'Yoda', LastName: '' },
+    { PersonId: 12, FirstName: 'Obi-Wan', LastName: 'Kenobi' },
+    { PersonId: 13, FirstName: 'Anakin', LastName: 'Skywalker' },
+    { PersonId: 14, FirstName: 'Padme', LastName: 'Amidala' },
+    { PersonId: 15, FirstName: 'Mace', LastName: 'Windu' },
+    { PersonId: 16, FirstName: 'Qui-Gon', LastName: 'Jinn' },
+    { PersonId: 17, FirstName: 'Jango', LastName: 'Fett' },
+    { PersonId: 18, FirstName: 'Bane', LastName: '' },
+    { PersonId: 19, FirstName: 'Darth', LastName: 'Sidious' },
+    { PersonId: 20, FirstName: 'Kylo', LastName: 'Ren' },
+    { PersonId: 21, FirstName: 'Rey', LastName: 'Skywalker' },
+    { PersonId: 22, FirstName: 'Bix', LastName: 'Caleen' },
+    { PersonId: 23, FirstName: 'Ahsoka', LastName: 'Tano' },
+    { PersonId: 24, FirstName: 'Maarva', LastName: 'Andor' },
+    { PersonId: 25, FirstName: 'Mon', LastName: 'Mothma' },
+    { PersonId: 26, FirstName: 'Syril', LastName: 'Karn' },
+    { PersonId: 27, FirstName: 'Saw', LastName: 'Gerrera' },
+    { PersonId: 28, FirstName: 'Ezra', LastName: 'Bridger' },
+    { PersonId: 29, FirstName: 'Sabine', LastName: 'Wren' },
+    { PersonId: 30, FirstName: 'Orson', LastName: 'Krennic' },
+    { PersonId: 31, FirstName: 'Galen', LastName: 'Erso' },
+    { PersonId: 32, FirstName: 'Dedra', LastName: 'Meero' }
 ];
 
 const table = Object.assign(tableRows, {
@@ -23,7 +53,7 @@ const table = Object.assign(tableRows, {
 </script>
 
 <template>
-    <table class="border border-separate border-gray-300 min-w-full">
+    <table class="min-w-full text-left">
         <ResultsHeader :columns="table.columns" />
         <ResultsBody :queryResult="table" />
     </table>

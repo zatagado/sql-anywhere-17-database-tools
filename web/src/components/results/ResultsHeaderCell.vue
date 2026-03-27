@@ -6,9 +6,9 @@ defineProps<{
 </script>
 
 <template>
-    <th 
-        class="border border-gray-300"
-    >{{ column!.name }}</th>
+    <th class="bg-gray-500 sticky top-0">
+        <span class="truncate">{{ column!.name }}</span>
+    </th>
 </template>
 
 <style scoped></style>

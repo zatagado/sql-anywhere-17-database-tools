@@ -5,11 +5,10 @@ defineProps<{
     queryResult: Result<unknown>
 }>()
 </script>
-
 <template>
-    <tbody>
+    <tbody class="border border-collapse border-gray-300">
         <!-- @vue-ignore -->
-        <ResultsBodyRow v-for="(row, index) in queryResult" :key="index" :columns="queryResult!.columns" :row="row" />
+        <ResultsBodyRow v-for="(row, index) in queryResult" :key="index" :rowIndex="index" :columns="queryResult!.columns" :row="row" />
     </tbody>
 </template>
 

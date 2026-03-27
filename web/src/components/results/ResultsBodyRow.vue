@@ -2,18 +2,18 @@
 import ResultsBodyCell from './ResultsBodyCell.vue';
 import type { ColumnDefinition } from 'odbc';
 defineProps<{
+    rowIndex: number
     columns: ColumnDefinition[]
     row: Array<{ [key: string]: string | number | boolean }>
 }>()
-debugger;
 </script>
 
 <template>
-  <tr>
-    <!-- TODO work on this stuff -->
-     <!-- @vue-ignore -->
-    <ResultsBodyCell v-for="(cell, key) in row" :key="key" :column="columns.find(column => column.name === key)" :value="cell" />
-  </tr>
+    <tr>
+        <td class="border border-gray-300 pr-2 text-right">{{ rowIndex + 1 }}</td>
+        <!-- @vue-ignore -->
+        <ResultsBodyCell v-for="column in columns" :key="column.name" :value="row[column.name]" />
+    </tr>
 </template>
 
 <style scoped></style>
