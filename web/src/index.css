@@ -87,6 +87,8 @@ table tr td {
     top: 0;
     z-index: 1;
     border-right: 2px solid transparent;
+    -webkit-user-drag: none;
+    user-select: none;
 }
 
 .resize-handle:hover {

@@ -118,14 +118,19 @@ const resizeHandleStyle = computed(() => ({ height: typeof tableHeight.value ===
 <template>
     <div class="container">
         <div class="table-wrapper">
-            <table class="resizeable-table" ref="tableElement">
+            <table
+                class="resizeable-table"
+                ref="tableElement"
+                :draggable="false"
+                @dragstart.prevent
+            >
                 <thead>
                     <tr>
                         <th v-for="({ text, ref }, index) in columns" :key="text" :ref="ref">
                             <span>{{ `${text} ${index}` }}</span>
                             <div
                                 :style="resizeHandleStyle"
-                                @mousedown="() => mouseDown(index)"
+                                @mousedown.prevent="mouseDown(index)"
                                 class="resize-handle"
                                 :class="{ active: activeIndex === index }"
                             />
@@ -198,4 +203,8 @@ const resizeHandleStyle = computed(() => ({ height: typeof tableHeight.value ===
     </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.resizeable-table {
+    -webkit-user-drag: none;
+}
+</style>
