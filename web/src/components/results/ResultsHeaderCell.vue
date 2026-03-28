@@ -1,19 +1,20 @@
 <script setup lang="ts">
-import type { ColumnDefinition } from 'odbc';
-defineProps<{
-    column: ColumnDefinition
+import type { CSSProperties, Ref } from 'vue';
+const props = defineProps<{
+    column: {
+        text: string,
+        ref: Ref<HTMLTableCellElement>
+    },
+    index: number,
+    handleStyle: CSSProperties
 }>()
+
+const handleClass = computed(() => ({ active: props.index === props.activeIndex ? 'active' : 'idle' }));
 </script>
 
 <template>
-    <th class="bg-gray-500 sticky top-0">
-        <span class="truncate">{{ column!.name }}</span>
-        <div
-            class="resize-handle"
-            :class="{ active: activeIndex === i }"
-            :style="{ height: tableHeight }"
-            @mousedown="() => mouseDown(i)"
-        />
+    <th :ref="column.ref">
+
     </th>
 </template>
 

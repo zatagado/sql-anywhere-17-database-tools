@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { onUpdated, ref } from 'vue';
+import { computed, onMounted, onUpdated, ref } from 'vue';
 import type { Result } from 'odbc';
-
-const minCellWidth = 100;
 
 /** ODBC `Result` extends `Array`; mock it with a real array plus metadata so `v-for` and typings match. */
 const tableContent = [
@@ -54,17 +52,26 @@ const table = Object.assign(tableContent, {
     return: 0,
 }) as Result<(typeof tableContent)[number]>;
 
-function createHeaders(headers: { name: string, dataType: number, dataTypeName: string, columnSize: number, decimalDigits: number, nullable: boolean }[]) {
-    return headers.map((item) => ({
-        text: item.name,
-        ref: ref()
-    }));
-}
-
+const minCellWidth = 100;
+const headers = [
+  "Items",
+  "Order #",
+  "Amount",
+  "Status",
+  "Delivery Driver"
+];
 const tableHeight = ref<number | 'auto'>('auto');
 const activeIndex = ref<number | null>(null);
 const tableElement = ref<HTMLTableElement>();
-const columns = createHeaders(table.columns);
+const columns = headers.map((item) => ({
+    text: item,
+    ref: ref()
+}));
+
+function mouseUp() {
+    activeIndex.value = null;
+    removeListeners();
+}
 
 function mouseDown(index: number) {
     activeIndex.value = index;
@@ -73,16 +80,25 @@ function mouseDown(index: number) {
 function mouseMove(e: MouseEvent) {
     const gridColumns = columns.map((column, index) => {
         if (index === activeIndex.value) {
-            const width = e.clientX - column.ref.value.offsetLeft;
+            const width = e.clientX - column.ref.value[0].offsetLeft;
 
             if (width >= minCellWidth) {
                 return `${width}px`;
             }
         }
-        return `${column.ref.value.offsetWidth}px`;
+        return `${column.ref.value[0].offsetWidth}px`;
     });
 
     tableElement.value!.style.gridTemplateColumns = gridColumns.join(' ');
+}
+
+function resizeColumn() {
+    tableHeight.value = tableElement.value!.offsetHeight;
+
+    if (activeIndex.value !== null) {
+        window.addEventListener('mousemove', mouseMove);
+        window.addEventListener('mouseup', mouseUp);
+    }
 }
 
 function removeListeners() {
@@ -90,23 +106,12 @@ function removeListeners() {
     window.removeEventListener('mouseup', removeListeners);
 }
 
-function mouseUp() {
-    activeIndex.value = null;
-    removeListeners();
-}
+onMounted(resizeColumn);
 
-onUpdated(() => {
-    tableHeight.value = tableElement.value!.offsetHeight;
+onUpdated(resizeColumn);
 
-    if (activeIndex.value !== null) {
-        window.addEventListener('mousemove', mouseMove);
-        window.addEventListener('mouseup', mouseUp);
-    }
-
-    return () => {
-        removeListeners();
-    }
-});
+const resizeHandleStyle = computed(() => ({ height: typeof tableHeight.value === 'number' ?
+    `${tableHeight.value}px` : tableHeight.value }));
 
 </script>
 
@@ -116,15 +121,21 @@ onUpdated(() => {
             <table class="resizeable-table" ref="tableElement">
                 <thead>
                     <tr>
-                        <th v-for="(column, index) in columns" :key="column.text" :ref="column.ref">
-                            <span>{{ column.text }}</span>
+                        <th v-for="({ text, ref }, index) in columns" :key="text" :ref="ref">
+                            <span>{{ `${text} ${index}` }}</span>
                             <div
-                                :style="{ height: tableHeight }"
+                                :style="resizeHandleStyle"
                                 @mousedown="() => mouseDown(index)"
                                 class="resize-handle"
-                                :class="{ active: activeIndex === index ? 'active' : 'idle' }"
+                                :class="{ active: activeIndex === index }"
                             />
                         </th>
+                        <!-- <ResultsHeaderCell
+                            v-for="(column, index) in columns" 
+                            :key="column.text"
+                            :column="column"
+                            :handleStyle="resizeHandleStyle"
+                        /> -->
                     </tr>
                 </thead>
                 <tbody>

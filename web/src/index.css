@@ -11,14 +11,14 @@ body {
     background: linear-gradient(90deg, #b1ef8f 0%, #517ea5 100%) repeat-y;
     font-family: Helvetica, Arial, sans-serif;
     color: #000;
-  }
-  
-  * {
+}
+
+* {
     box-sizing: border-box;
-  }
-  
-  /* Demo Only */
-  button {
+}
+
+/* Demo Only */
+button {
     background: #517ea5;
     border: none;
     color: #fff;
@@ -27,58 +27,58 @@ body {
     border-radius: 30px;
     padding: 10px 20px;
     cursor: pointer;
-  }
-  
-  .table-wrapper {
+}
+
+.table-wrapper {
     margin-bottom: 25px;
     border-radius: 6px;
     background: #fff;
     overflow: hidden; /* Clip any scrollbars that appear */
-  }
-  
-  table {
+}
+
+table {
     width: 100%;
     display: grid;
     overflow: auto;
     grid-template-columns:
-      minmax(150px, 3fr)
-      minmax(150px, 1fr)
-      minmax(150px, 1fr)
-      minmax(150px, 1fr)
-      minmax(150px, 1fr);
-  }
-  
-  table thead,
-  table tbody,
-  table tr {
+    minmax(150px, 3fr)
+    minmax(150px, 1fr)
+    minmax(150px, 1fr)
+    minmax(150px, 1fr)
+    minmax(150px, 1fr);
+}
+
+table thead,
+table tbody,
+table tr {
     display: contents;
-  }
-  
-  table th {
+}
+
+table th {
     position: relative;
     font-size: 18px;
-  }
-  
-  table th,
-  table td {
+}
+
+table th,
+table td {
     text-align: left;
     padding: 16px 20px;
     min-width: 100px;
-  }
-  
-  table th span,
-  table td span {
+}
+
+table th span,
+table td span {
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
     display: block;
-  }
-  
-  table tr td {
+}
+
+table tr td {
     border-top: 1px solid #ccc;
-  }
-  
-  .resize-handle {
+}
+
+.resize-handle {
     display: block;
     position: absolute;
     cursor: col-resize;
@@ -87,13 +87,13 @@ body {
     top: 0;
     z-index: 1;
     border-right: 2px solid transparent;
-  }
-  
-  .resize-handle:hover {
+}
+
+.resize-handle:hover {
     border-color: #ccc;
-  }
-  
-  .resize-handle.active {
+}
+
+.resize-handle.active {
     border-color: #517ea5;
-  }
+}
   
