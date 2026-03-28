@@ -10,7 +10,7 @@ defineProps<{
 
 <template>
     <tr>
-        <td class="border border-gray-300 pr-2 text-right">{{ rowIndex + 1 }}</td>
+        <td>{{ rowIndex + 1 }}</td>
         <!-- @vue-ignore -->
         <ResultsBodyCell v-for="column in columns" :key="column.name" :value="row[column.name]" />
     </tr>

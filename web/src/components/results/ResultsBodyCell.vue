@@ -8,8 +8,8 @@ defineProps({
 </script>
 
 <template>
-    <td class="border border-gray-300 ">
-        <span class="truncate">{{ value }}</span>
+    <td>
+        <span>{{ value }}</span>
     </td>
 </template>
 

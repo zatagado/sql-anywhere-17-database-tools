@@ -6,7 +6,7 @@ defineProps<{
 }>()
 </script>
 <template>
-    <tbody class="border border-collapse border-gray-300">
+    <tbody>
         <!-- @vue-ignore -->
         <ResultsBodyRow v-for="(row, index) in queryResult" :key="index" :rowIndex="index" :columns="queryResult!.columns" :row="row" />
     </tbody>

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import ResultsHeader from './ResultsHeader.vue';
-import ResultsBody from './ResultsBody.vue';
+import { onUpdated, ref } from 'vue';
 import type { Result } from 'odbc';
 
+const minCellWidth = 100;
+
 /** ODBC `Result` extends `Array`; mock it with a real array plus metadata so `v-for` and typings match. */
-const tableRows = [
+const tableContent = [
     { PersonId: 1, FirstName: 'Luthen', LastName: 'Rael' },
     { PersonId: 2, FirstName: 'Cassian', LastName: 'Andor' },
     { PersonId: 3, FirstName: 'Leia', LastName: 'Organa' },
@@ -39,24 +40,151 @@ const tableRows = [
     { PersonId: 32, FirstName: 'Dedra', LastName: 'Meero' }
 ];
 
-const table = Object.assign(tableRows, {
+const table = Object.assign(tableContent, {
     columns: [
-        { name: 'PersonId', dataType: 4, dataTypeName: 'SQL_INTEGER', columnSize: 10, decimalDigits: 0, nullable: true },
-        { name: 'FirstName', dataType: 12, dataTypeName: 'SQL_VARCHAR', columnSize: 255, decimalDigits: 0, nullable: true },
-        { name: 'LastName', dataType: 12, dataTypeName: 'SQL_VARCHAR', columnSize: 255, decimalDigits: 0, nullable: true },
+        { name: 'Items', dataType: 4, dataTypeName: 'SQL_INTEGER', columnSize: 10, decimalDigits: 0, nullable: true },
+        { name: 'Order #', dataType: 12, dataTypeName: 'SQL_VARCHAR', columnSize: 255, decimalDigits: 0, nullable: true },
+        { name: 'Amount', dataType: 12, dataTypeName: 'SQL_VARCHAR', columnSize: 255, decimalDigits: 0, nullable: true },
+        { name: 'Status', dataType: 4, dataTypeName: 'SQL_INTEGER', columnSize: 10, decimalDigits: 0, nullable: true },
+        { name: 'Delivery Driver', dataType: 12, dataTypeName: 'SQL_VARCHAR', columnSize: 255, decimalDigits: 0, nullable: true }
     ],
     count: 2,
     parameters: [] as (number | string)[],
     statement: 'select * from persons;',
     return: 0,
-}) as Result<(typeof tableRows)[number]>;
+}) as Result<(typeof tableContent)[number]>;
+
+function createHeaders(headers: { name: string, dataType: number, dataTypeName: string, columnSize: number, decimalDigits: number, nullable: boolean }[]) {
+    return headers.map((item) => ({
+        text: item.name,
+        ref: ref()
+    }));
+}
+
+const tableHeight = ref<number | 'auto'>('auto');
+const activeIndex = ref<number | null>(null);
+const tableElement = ref<HTMLTableElement>();
+const columns = createHeaders(table.columns);
+
+function mouseDown(index: number) {
+    activeIndex.value = index;
+}
+
+function mouseMove(e: MouseEvent) {
+    const gridColumns = columns.map((column, index) => {
+        if (index === activeIndex.value) {
+            const width = e.clientX - column.ref.value.offsetLeft;
+
+            if (width >= minCellWidth) {
+                return `${width}px`;
+            }
+        }
+        return `${column.ref.value.offsetWidth}px`;
+    });
+
+    tableElement.value!.style.gridTemplateColumns = gridColumns.join(' ');
+}
+
+function removeListeners() {
+    window.removeEventListener('mousemove', mouseMove);
+    window.removeEventListener('mouseup', removeListeners);
+}
+
+function mouseUp() {
+    activeIndex.value = null;
+    removeListeners();
+}
+
+onUpdated(() => {
+    tableHeight.value = tableElement.value!.offsetHeight;
+
+    if (activeIndex.value !== null) {
+        window.addEventListener('mousemove', mouseMove);
+        window.addEventListener('mouseup', mouseUp);
+    }
+
+    return () => {
+        removeListeners();
+    }
+});
+
 </script>
 
 <template>
-    <table class="min-w-full text-left">
-        <ResultsHeader :columns="table.columns" />
-        <ResultsBody :queryResult="table" />
-    </table>
+    <div class="container">
+        <div class="table-wrapper">
+            <table class="resizeable-table" ref="tableElement">
+                <thead>
+                    <tr>
+                        <th v-for="(column, index) in columns" :key="column.text" :ref="column.ref">
+                            <span>{{ column.text }}</span>
+                            <div
+                                :style="{ height: tableHeight }"
+                                @mousedown="() => mouseDown(index)"
+                                class="resize-handle"
+                                :class="{ active: activeIndex === index ? 'active' : 'idle' }"
+                            />
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                        <span>Large Detroit Style Pizza</span>
+                        </td>
+                        <td>
+                        <span>3213456785</span>
+                        </td>
+                        <td>
+                        <span>$31.43</span>
+                        </td>
+                        <td>
+                        <span>Pending</span>
+                        </td>
+                        <td>
+                        <span>Dave</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                        <span>
+                            Double Decker Club With Fries. Pickles, extra side avacado
+                        </span>
+                        </td>
+                        <td>
+                        <span>9874563245</span>
+                        </td>
+                        <td>
+                        <span>$12.99</span>
+                        </td>
+                        <td>
+                        <span>Delivered</span>
+                        </td>
+                        <td>
+                        <span>Cathy</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                        <span>Family Sized Lobster Dinner</span>
+                        </td>
+                        <td>
+                        <span>3456781234</span>
+                        </td>
+                        <td>
+                        <span>$320.00</span>
+                        </td>
+                        <td>
+                        <span>In Progress</span>
+                        </td>
+                        <td>
+                        <span>Alexander</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </template>
 
 <style scoped></style>
