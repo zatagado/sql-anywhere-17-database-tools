@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUpdated, ref } from 'vue';
 import type { Result } from 'odbc';
+import ResultsBody from './ResultsBody.vue';
 
 /** ODBC `Result` extends `Array`; mock it with a real array plus metadata so `v-for` and typings match. */
 const tableContent = [
@@ -40,11 +41,9 @@ const tableContent = [
 
 const table = Object.assign(tableContent, {
     columns: [
-        { name: 'Items', dataType: 4, dataTypeName: 'SQL_INTEGER', columnSize: 10, decimalDigits: 0, nullable: true },
-        { name: 'Order #', dataType: 12, dataTypeName: 'SQL_VARCHAR', columnSize: 255, decimalDigits: 0, nullable: true },
-        { name: 'Amount', dataType: 12, dataTypeName: 'SQL_VARCHAR', columnSize: 255, decimalDigits: 0, nullable: true },
-        { name: 'Status', dataType: 4, dataTypeName: 'SQL_INTEGER', columnSize: 10, decimalDigits: 0, nullable: true },
-        { name: 'Delivery Driver', dataType: 12, dataTypeName: 'SQL_VARCHAR', columnSize: 255, decimalDigits: 0, nullable: true }
+        { name: 'PersonId', dataType: 4, dataTypeName: 'SQL_INTEGER', columnSize: 10, decimalDigits: 0, nullable: true },
+        { name: 'FirstName', dataType: 12, dataTypeName: 'SQL_VARCHAR', columnSize: 255, decimalDigits: 0, nullable: true },
+        { name: 'LastName', dataType: 12, dataTypeName: 'SQL_VARCHAR', columnSize: 255, decimalDigits: 0, nullable: true }
     ],
     count: 2,
     parameters: [] as (number | string)[],
@@ -53,18 +52,11 @@ const table = Object.assign(tableContent, {
 }) as Result<(typeof tableContent)[number]>;
 
 const minCellWidth = 100;
-const headers = [
-  "Items",
-  "Order #",
-  "Amount",
-  "Status",
-  "Delivery Driver"
-];
 const tableHeight = ref<number | 'auto'>('auto');
 const activeIndex = ref<number | null>(null);
 const tableElement = ref<HTMLTableElement>();
-const columns = headers.map((item) => ({
-    text: item,
+const columns = table.columns.map((item) => ({
+    text: item.name,
     ref: ref()
 }));
 
@@ -110,6 +102,8 @@ onMounted(resizeColumn);
 
 onUpdated(resizeColumn);
 
+const tableStyle = { gridTemplateColumns: columns.map(() => 'minmax(150px, 1fr)').join(' ') };
+
 const resizeHandleStyle = computed(() => ({ height: typeof tableHeight.value === 'number' ?
     `${tableHeight.value}px` : tableHeight.value }));
 
@@ -120,19 +114,19 @@ const resizeHandleStyle = computed(() => ({ height: typeof tableHeight.value ===
         <div class="table-wrapper">
             <table
                 class="resizeable-table"
-                ref="tableElement"
-                :draggable="false"
                 @dragstart.prevent
+                ref="tableElement"
+                :style="tableStyle"
             >
                 <thead>
                     <tr>
-                        <th v-for="({ text, ref }, index) in columns" :key="text" :ref="ref">
-                            <span>{{ `${text} ${index}` }}</span>
+                        <th v-for="(column, index) in columns" :key="column.text" :ref="column.ref">
+                            <span>{{ column.text }}</span>
                             <div
-                                :style="resizeHandleStyle"
-                                @mousedown.prevent="mouseDown(index)"
                                 class="resize-handle"
                                 :class="{ active: activeIndex === index }"
+                                @mousedown="mouseDown(index)"
+                                :style="resizeHandleStyle"
                             />
                         </th>
                         <!-- <ResultsHeaderCell
@@ -143,66 +137,11 @@ const resizeHandleStyle = computed(() => ({ height: typeof tableHeight.value ===
                         /> -->
                     </tr>
                 </thead>
-                <tbody>
-                    <tr>
-                        <td>
-                        <span>Large Detroit Style Pizza</span>
-                        </td>
-                        <td>
-                        <span>3213456785</span>
-                        </td>
-                        <td>
-                        <span>$31.43</span>
-                        </td>
-                        <td>
-                        <span>Pending</span>
-                        </td>
-                        <td>
-                        <span>Dave</span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                        <span>
-                            Double Decker Club With Fries. Pickles, extra side avacado
-                        </span>
-                        </td>
-                        <td>
-                        <span>9874563245</span>
-                        </td>
-                        <td>
-                        <span>$12.99</span>
-                        </td>
-                        <td>
-                        <span>Delivered</span>
-                        </td>
-                        <td>
-                        <span>Cathy</span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                        <span>Family Sized Lobster Dinner</span>
-                        </td>
-                        <td>
-                        <span>3456781234</span>
-                        </td>
-                        <td>
-                        <span>$320.00</span>
-                        </td>
-                        <td>
-                        <span>In Progress</span>
-                        </td>
-                        <td>
-                        <span>Alexander</span>
-                        </td>
-                    </tr>
-                </tbody>
+                <ResultsBody :queryResult="table" />
             </table>
         </div>
     </div>
 </template>
-
 <style scoped>
 .resizeable-table {
     -webkit-user-drag: none;

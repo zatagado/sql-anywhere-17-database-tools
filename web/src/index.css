@@ -40,12 +40,6 @@ table {
     width: 100%;
     display: grid;
     overflow: auto;
-    grid-template-columns:
-    minmax(150px, 3fr)
-    minmax(150px, 1fr)
-    minmax(150px, 1fr)
-    minmax(150px, 1fr)
-    minmax(150px, 1fr);
 }
 
 table thead,
@@ -87,7 +81,6 @@ table tr td {
     top: 0;
     z-index: 1;
     border-right: 2px solid transparent;
-    -webkit-user-drag: none;
     user-select: none;
 }
 
