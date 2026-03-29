@@ -64,7 +64,7 @@ const tableStyle = { gridTemplateColumns: table.columns.map(() => 'minmax(150px,
 <template>
     <div class="container">
         <table
-            class="resizeable-table"
+            class="resizeable-table grid w-full"
             @dragstart.prevent
             ref="tableElement"
             :style="tableStyle"

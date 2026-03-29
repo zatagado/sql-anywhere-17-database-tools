@@ -69,8 +69,8 @@ const resizeHandleStyle = computed(() => ({ height: typeof tableHeight.value ===
 
 </script>
 <template>
-    <thead>
-        <tr>
+    <thead class="contents">
+        <tr class="contents">
             <!-- <th></th> -->
             <ResultsHeaderCell
                 v-for="(column, index) in columnProps"
