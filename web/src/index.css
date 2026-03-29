@@ -17,29 +17,9 @@ body {
     box-sizing: border-box;
 }
 
-/* Demo Only */
-button {
-    background: #517ea5;
-    border: none;
-    color: #fff;
-    font-size: 24px;
-    font-weight: 700;
-    border-radius: 30px;
-    padding: 10px 20px;
-    cursor: pointer;
-}
-
-.table-wrapper {
-    margin-bottom: 25px;
-    border-radius: 6px;
-    background: #fff;
-    overflow: hidden; /* Clip any scrollbars that appear */
-}
-
 table {
     width: 100%;
     display: grid;
-    overflow: auto;
 }
 
 table thead,
@@ -49,7 +29,6 @@ table tr {
 }
 
 table th {
-    position: relative;
     font-size: 18px;
 }
 

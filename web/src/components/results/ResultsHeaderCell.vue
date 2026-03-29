@@ -1,21 +1,40 @@
 <script setup lang="ts">
-import type { CSSProperties, Ref } from 'vue';
-const props = defineProps<{
+import type { CSSProperties, VNodeRef } from 'vue';
+defineProps<{
+    element: VNodeRef | undefined,
+    activeIndex: number | null,
     column: {
-        text: string,
-        ref: Ref<HTMLTableCellElement>
-    },
+        name: string,
+        dataType: number,
+        dataTypeName: string,
+        columnSize: number,
+        decimalDigits: number,
+        nullable: boolean
+    }
     index: number,
-    handleStyle: CSSProperties
+    mouseDown: (index: number) => void,
+    resizeHandleStyle: CSSProperties
 }>()
-
-const handleClass = computed(() => ({ active: props.index === props.activeIndex ? 'active' : 'idle' }));
 </script>
 
 <template>
-    <th :ref="column.ref">
-
+    <th class="sticky top-0" :ref="element">
+        <span>{{ column.name }}</span>
+        <div
+            class="resize-handle"
+            :class="{ active: activeIndex === index }"
+            @mousedown="mouseDown(index)"
+            :style="resizeHandleStyle"
+        />
     </th>
 </template>
 
-<style scoped></style>
+<!-- <style scoped>
+.resize-handle:hover {
+    border-color: #ccc;
+}
+
+.resize-handle.active {
+    border-color: #517ea5;
+}
+</style> -->

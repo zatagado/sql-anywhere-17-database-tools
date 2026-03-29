@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, onUpdated, ref } from 'vue';
+import { ref } from 'vue';
 import type { Result } from 'odbc';
+import ResultsHeader from './ResultsHeader.vue';
 import ResultsBody from './ResultsBody.vue';
 
 /** ODBC `Result` extends `Array`; mock it with a real array plus metadata so `v-for` and typings match. */
@@ -51,99 +52,25 @@ const table = Object.assign(tableContent, {
     return: 0,
 }) as Result<(typeof tableContent)[number]>;
 
-const minCellWidth = 100;
-const tableHeight = ref<number | 'auto'>('auto');
-const activeIndex = ref<number | null>(null);
 const tableElement = ref<HTMLTableElement>();
-const columns = table.columns.map((item) => ({
-    text: item.name,
-    ref: ref()
-}));
 
-function mouseUp() {
-    activeIndex.value = null;
-    removeListeners();
-}
+const tableStyle = { gridTemplateColumns: table.columns.map(() => 'minmax(150px, 1fr)').join(' ') };
 
-function mouseDown(index: number) {
-    activeIndex.value = index;
-}
-
-function mouseMove(e: MouseEvent) {
-    const gridColumns = columns.map((column, index) => {
-        if (index === activeIndex.value) {
-            const width = e.clientX - column.ref.value[0].offsetLeft;
-
-            if (width >= minCellWidth) {
-                return `${width}px`;
-            }
-        }
-        return `${column.ref.value[0].offsetWidth}px`;
-    });
-
-    tableElement.value!.style.gridTemplateColumns = gridColumns.join(' ');
-}
-
-function resizeColumn() {
-    tableHeight.value = tableElement.value!.offsetHeight;
-
-    if (activeIndex.value !== null) {
-        window.addEventListener('mousemove', mouseMove);
-        window.addEventListener('mouseup', mouseUp);
-    }
-}
-
-function removeListeners() {
-    window.removeEventListener('mousemove', mouseMove);
-    window.removeEventListener('mouseup', removeListeners);
-}
-
-onMounted(resizeColumn);
-
-onUpdated(resizeColumn);
-
-const tableStyle = { gridTemplateColumns: columns.map(() => 'minmax(150px, 1fr)').join(' ') };
-
-const resizeHandleStyle = computed(() => ({ height: typeof tableHeight.value === 'number' ?
-    `${tableHeight.value}px` : tableHeight.value }));
+// TODO need to consider the case where we have scrolled horizontally and we want to resize the column.
+// TODO right now resizing while scrolled horizontally will not consider relativity
 
 </script>
 
 <template>
     <div class="container">
-        <div class="table-wrapper">
-            <table
-                class="resizeable-table"
-                @dragstart.prevent
-                ref="tableElement"
-                :style="tableStyle"
-            >
-                <thead>
-                    <tr>
-                        <th v-for="(column, index) in columns" :key="column.text" :ref="column.ref">
-                            <span>{{ column.text }}</span>
-                            <div
-                                class="resize-handle"
-                                :class="{ active: activeIndex === index }"
-                                @mousedown="mouseDown(index)"
-                                :style="resizeHandleStyle"
-                            />
-                        </th>
-                        <!-- <ResultsHeaderCell
-                            v-for="(column, index) in columns" 
-                            :key="column.text"
-                            :column="column"
-                            :handleStyle="resizeHandleStyle"
-                        /> -->
-                    </tr>
-                </thead>
-                <ResultsBody :queryResult="table" />
-            </table>
-        </div>
+        <table
+            class="resizeable-table"
+            @dragstart.prevent
+            ref="tableElement"
+            :style="tableStyle"
+        >
+            <ResultsHeader :columns="table.columns" :table-element="tableElement" />
+            <ResultsBody :queryResult="table" />
+        </table>
     </div>
 </template>
-<style scoped>
-.resizeable-table {
-    -webkit-user-drag: none;
-}
-</style>
