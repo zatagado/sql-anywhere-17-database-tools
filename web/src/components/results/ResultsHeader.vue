@@ -33,15 +33,19 @@ function mouseDown(index: number) {
 function mouseMove(event: MouseEvent) {
     const gridColumns = columnProps.map((column, index) => {
         if (activeIndex.value === index) {
-            const width = event.clientX - (column.ref.value?.offsetLeft ?? 0);
+            const width = event.clientX - (column.ref.value?.getBoundingClientRect().left ?? 0);
             if (width >= minCellWidth) {
                 return `${width}px`;
             }
         }
+
+        if (columnProps.length - 1 === index) {
+            return 'minmax(150px, 1fr)';
+        }
         return `${column.ref.value?.offsetWidth ?? 0}px`;
     });
 
-    props.tableElement!.style.gridTemplateColumns = gridColumns.join(' ');
+    props.tableElement!.style.gridTemplateColumns = ['50px', ...gridColumns].join(' ');
 }
 
 function resizeColumn() {
@@ -71,7 +75,7 @@ const resizeHandleStyle = computed(() => ({ height: typeof tableHeight.value ===
 <template>
     <thead class="contents">
         <tr class="contents">
-            <!-- <th></th> -->
+            <th class="results-header-corner"></th>
             <ResultsHeaderCell
                 v-for="(column, index) in columnProps"
                 :key="column.def.name"
@@ -86,4 +90,14 @@ const resizeHandleStyle = computed(() => ({ height: typeof tableHeight.value ===
     </thead>
 </template>
 
-<style scoped></style>
+<style scoped>
+.results-header-corner {
+    background: var(--vscode-editor-background);
+    border-bottom: 1px solid var(--vscode-editorWidget-border);
+    border-right: 1px solid var(--vscode-editorWidget-border);
+    left: 0;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+}
+</style>

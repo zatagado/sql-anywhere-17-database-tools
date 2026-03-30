@@ -18,7 +18,7 @@ defineProps<{
 </script>
 
 <template>
-    <th class="sticky top-0" :ref="element">
+    <th :ref="element">
         <span>
             {{ column.name }}
         </span>
@@ -33,9 +33,15 @@ defineProps<{
 
 <style scoped>
 th {
-    text-align: left;
-    padding: 16px 20px;
+    background: var(--vscode-editor-background);
+    border-bottom: 1px solid var(--vscode-editorWidget-border);
+    border-left: 1px solid var(--vscode-editorWidget-border);
     min-width: 100px;
+    padding: 8px 20px 8px 20px;
+    position: sticky;
+    text-align: left;
+    top: 0;
+    z-index: 2;
 }
 
 th span {
@@ -57,12 +63,7 @@ th span {
     z-index: 1;
 }
 
-/* Disable hover when mouse is down */
-.resize-handle:hover {
-    border-color: #ccc;
-}
-
 .resize-handle.active {
-    border-color: #517ea5;
+    border-color: var(--vscode-inputOption-activeBackground);
 }
 </style>

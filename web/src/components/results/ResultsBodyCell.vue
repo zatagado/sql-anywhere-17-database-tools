@@ -1,29 +1,31 @@
 <script setup lang="ts">
-defineProps({
+const props = defineProps<{
+    column: {
+        name: string,
+        dataType: number,
+        dataTypeName: string,
+        columnSize: number,
+        decimalDigits: number,
+        nullable: boolean
+    },
     value: {  
         type: [String, Number],
         required: true
     }
-})
+}>()
+
+const textClass = props.column.dataType === 4 ? 'numeric' : 'string'; // TODO add helper function for this
 </script>
 
 <template>
     <td>
-        <span>
-            {{ value }}
-        </span>
+        <span :class="textClass">{{ value }}</span>
     </td>
 </template>
 
 <style scoped>
 td {
-    text-align: left;
-    padding: 16px 20px;
-    min-width: 100px;
-}
-
-tr td {
-    border-top: 1px solid #ccc;
+    border-left: 1px solid var(--vscode-editorWidget-border);
 }
 
 td span {
@@ -31,5 +33,13 @@ td span {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.numeric {
+    text-align: right;
+}
+
+.string {
+    text-align: left;
 }
 </style>

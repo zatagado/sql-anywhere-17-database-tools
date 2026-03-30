@@ -1,6 +1,6 @@
 import * as databaseTree from './components/navigation/databaseTree';
 import * as datasourcePick from './components/selection/datasourcePick';
-import * as databaseObjectView from './components/preview/objectView';
+import * as databaseObject from './components/preview/object';
 import * as results from './components/results/results';
 import * as test from './components/results/test';
 import * as connectionManager from './manager/connectionManager';
@@ -32,7 +32,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('databaseTree.refresh', () => databaseTreeProvider.refresh()),
         vscode.commands.registerCommand('sql-anywhere-17-database-tools.removeDatasource',
             () => datasourcePick.removeDatasource(context)),
-        ...databaseObjectView.activate(),
+        ...databaseObject.activate(),
         ...results.activate(context),
         ...test.activate(context)
     );

@@ -46,7 +46,7 @@ const table = Object.assign(tableContent, {
         { name: 'FirstName', dataType: 12, dataTypeName: 'SQL_VARCHAR', columnSize: 255, decimalDigits: 0, nullable: true },
         { name: 'LastName', dataType: 12, dataTypeName: 'SQL_VARCHAR', columnSize: 255, decimalDigits: 0, nullable: true }
     ],
-    count: 2,
+    count: 32,
     parameters: [] as (number | string)[],
     statement: 'select * from persons;',
     return: 0,
@@ -54,23 +54,35 @@ const table = Object.assign(tableContent, {
 
 const tableElement = ref<HTMLTableElement>();
 
-const tableStyle = { gridTemplateColumns: table.columns.map(() => 'minmax(150px, 1fr)').join(' ') };
-
-// TODO need to consider the case where we have scrolled horizontally and we want to resize the column.
-// TODO right now resizing while scrolled horizontally will not consider relativity
+const tableStyle = { gridTemplateColumns: ['50px', ...table.columns.map((column) => {
+    if (column.dataType === 4) {
+        return 'minmax(150px, 1fr)';
+    }
+    else {
+        return 'minmax(150px, 3fr)';
+    }
+})].join(' ') };
 
 </script>
 
 <template>
-    <div class="container">
-        <table
-            class="resizeable-table grid w-full"
-            @dragstart.prevent
-            ref="tableElement"
-            :style="tableStyle"
-        >
-            <ResultsHeader :columns="table.columns" :table-element="tableElement" />
-            <ResultsBody :queryResult="table" />
-        </table>
-    </div>
+    <table
+        class="grid min-w-full w-fit"
+        @dragstart.prevent
+        ref="tableElement"
+        :style="tableStyle"
+    >
+        <ResultsHeader :columns="table.columns" :table-element="tableElement" />
+        <ResultsBody :queryResult="table" />
+    </table>
 </template>
+
+<style>
+td span {
+    font: 14px Consolas, "Courier New", monospace;
+}
+
+th span {
+    font: 700 14px Consolas, "Courier New", monospace;
+}
+</style>

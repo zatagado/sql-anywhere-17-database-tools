@@ -11,5 +11,3 @@ defineProps<{
         <ResultsBodyRow v-for="(row, index) in queryResult" :key="index" :rowIndex="index" :columns="queryResult!.columns" :row="row" />
     </tbody>
 </template>
-
-<style scoped></style>
