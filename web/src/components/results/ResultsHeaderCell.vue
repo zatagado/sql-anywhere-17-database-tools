@@ -35,7 +35,7 @@ function onSortClick() {
             </span>
             <Transition name="sort-chevron">
                 <span
-                    v-if="column.sort !== null"
+                    v-if="column.sort === 'asc' || column.sort === 'desc'"
                     class="sort-chevron"
                     :class="{ desc: column.sort === 'desc' }"
                 />
