@@ -6,7 +6,8 @@ const props = defineProps<{
         dataTypeName: string,
         columnSize: number,
         decimalDigits: number,
-        nullable: boolean
+        nullable: boolean,
+        sort?: 'asc' | 'desc' | null,
     },
     value: {  
         type: [String, Number],

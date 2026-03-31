@@ -3,7 +3,9 @@ import ResultsTable from './ResultsTable.vue';
 </script>
 
 <template>
-    <ResultsTable />
+    <div class="w-full min-w-0">
+        <ResultsTable />
+    </div>
 </template>
 
 <style scoped></style>

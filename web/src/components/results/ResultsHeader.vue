@@ -1,19 +1,29 @@
 <script setup lang="ts">
 import { computed, onMounted, onUpdated, ref } from 'vue';
 import ResultsHeaderCell from './ResultsHeaderCell.vue';
+type Column = {
+    name: string,
+    dataType: number,
+    dataTypeName: string,
+    columnSize: number,
+    decimalDigits: number,
+    nullable: boolean,
+    sort: 'asc' | 'desc' | null,
+};
+
 const props = defineProps<{
-    columns: {
-        name: string,
-        dataType: number,
-        dataTypeName: string,
-        columnSize: number,
-        decimalDigits: number,
-        nullable: boolean
-    }[],
+    columns: Column[],
     tableElement: HTMLTableElement | undefined
-}>()
+}>();
+
+const emit = defineEmits<{
+    sort: [{ column: Column, index: number }]
+}>();
 
 const minCellWidth = 100;
+const defaultColumnWidth = 150;
+const indexColumn = '50px';
+const fillerColumn = 'minmax(0, 1fr)';
 const tableHeight = ref<number | 'auto'>('auto');
 const activeIndex = ref<number | null>(null);
 const columnProps = props.columns.map((column) => ({
@@ -39,13 +49,10 @@ function mouseMove(event: MouseEvent) {
             }
         }
 
-        if (columnProps.length - 1 === index) {
-            return 'minmax(150px, 1fr)';
-        }
-        return `${column.ref.value?.offsetWidth ?? 0}px`;
+        return `${column.ref.value?.offsetWidth ?? defaultColumnWidth}px`;
     });
 
-    props.tableElement!.style.gridTemplateColumns = ['50px', ...gridColumns].join(' ');
+    props.tableElement!.style.gridTemplateColumns = [indexColumn, ...gridColumns, fillerColumn].join(' ');
 }
 
 function resizeColumn() {
@@ -75,7 +82,7 @@ const resizeHandleStyle = computed(() => ({ height: typeof tableHeight.value ===
 <template>
     <thead class="contents">
         <tr class="contents">
-            <th class="results-header-corner"></th>
+            <th class="results-header index"></th>
             <ResultsHeaderCell
                 v-for="(column, index) in columnProps"
                 :key="column.def.name"
@@ -85,19 +92,30 @@ const resizeHandleStyle = computed(() => ({ height: typeof tableHeight.value ===
                 :index="index"
                 :mouseDown="mouseDown"
                 :resizeHandleStyle="resizeHandleStyle"
+                @sort="emit('sort', $event)"
             />
+            <th class="results-header filler"></th>
         </tr>
     </thead>
 </template>
 
 <style scoped>
-.results-header-corner {
+.results-header {
     background: var(--vscode-editor-background);
     border-bottom: 1px solid var(--vscode-editorWidget-border);
-    border-right: 1px solid var(--vscode-editorWidget-border);
-    left: 0;
     position: sticky;
     top: 0;
+}
+
+.results-header.index {
+    border-right: 1px solid var(--vscode-editorWidget-border);
+    left: 0;
     z-index: 3;
+}
+
+.results-header.filler {
+    border-left: 1px solid var(--vscode-editorWidget-border);
+    padding: 0;
+    z-index: 2;
 }
 </style>

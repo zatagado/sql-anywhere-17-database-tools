@@ -8,7 +8,8 @@ defineProps<{
         dataTypeName: string,
         columnSize: number,
         decimalDigits: number,
-        nullable: boolean
+        nullable: boolean,
+        sort?: 'asc' | 'desc' | null,
     }[]
     row: Array<{ [key: string]: string | number | boolean }>
 }>()
@@ -28,6 +29,7 @@ defineProps<{
             :column="column"
             :value="row[column.name]"
         />
+        <td class="filler-cell" aria-hidden="true"></td>
     </tr>
 </template>
 
@@ -45,6 +47,11 @@ td {
     border-top: 1px solid var(--vscode-editorWidget-border);
     text-align: left;
     padding: 5px 20px;
+}
+
+td.filler-cell {
+    border-left: 1px solid var(--vscode-editorWidget-border);
+    padding: 0;
 }
 </style>
 

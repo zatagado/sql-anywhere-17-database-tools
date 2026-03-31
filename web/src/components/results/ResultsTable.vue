@@ -1,8 +1,22 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import type { Result } from 'odbc';
 import ResultsHeader from './ResultsHeader.vue';
 import ResultsBody from './ResultsBody.vue';
+const emit = defineEmits<{
+    sortColumn: [{ column: Column, index: number }]
+}>();
+
+/** Base ODBC column metadata (no sort until `buildQueryResult` adds `sort`). */
+const columnsMeta = [
+    { name: 'PersonId', dataType: 4, dataTypeName: 'SQL_INTEGER', columnSize: 10, decimalDigits: 0, nullable: true },
+    { name: 'FirstName', dataType: 12, dataTypeName: 'SQL_VARCHAR', columnSize: 255, decimalDigits: 0, nullable: true },
+    { name: 'LastName', dataType: 12, dataTypeName: 'SQL_VARCHAR', columnSize: 255, decimalDigits: 0, nullable: true }
+];
+
+type SortDirection = 'asc' | 'desc' | null;
+type Column = (typeof columnsMeta)[number] & { sort: SortDirection };
+type Row = (typeof tableContent)[number];
 
 /** ODBC `Result` extends `Array`; mock it with a real array plus metadata so `v-for` and typings match. */
 const tableContent = [
@@ -40,39 +54,78 @@ const tableContent = [
     { PersonId: 32, FirstName: 'Dedra', LastName: 'Meero' }
 ];
 
-const table = Object.assign(tableContent, {
-    columns: [
-        { name: 'PersonId', dataType: 4, dataTypeName: 'SQL_INTEGER', columnSize: 10, decimalDigits: 0, nullable: true },
-        { name: 'FirstName', dataType: 12, dataTypeName: 'SQL_VARCHAR', columnSize: 255, decimalDigits: 0, nullable: true },
-        { name: 'LastName', dataType: 12, dataTypeName: 'SQL_VARCHAR', columnSize: 255, decimalDigits: 0, nullable: true }
-    ],
-    count: 32,
-    parameters: [] as (number | string)[],
-    statement: 'select * from persons;',
-    return: 0,
-}) as Result<(typeof tableContent)[number]>;
+function buildQueryResult(rows: Row[]): Result<Row> {
+    const arr = rows.slice();
+    const columns: Column[] = columnsMeta.map((c) => ({ ...c, sort: null }));
+    return Object.assign(arr, {
+        columns,
+        count: arr.length,
+        parameters: [] as (number | string)[],
+        statement: 'select * from persons;',
+        return: 0
+    }) as Result<Row>;
+}
+
+const table = ref(buildQueryResult([...tableContent]));
+// TODO remove this
+
+const columnsForHeader = computed(() => table.value.columns as Column[]);
 
 const tableElement = ref<HTMLTableElement>();
 
-const tableStyle = { gridTemplateColumns: ['50px', ...table.columns.map((column) => {
-    if (column.dataType === 4) {
-        return 'minmax(150px, 1fr)';
+const defaultColumnWidth = 150;
+const indexColumn = '50px';
+const fillerColumn = 'minmax(0, 1fr)';
+const tableStyle = {
+    gridTemplateColumns: [indexColumn, ...columnsMeta.map(() => `${defaultColumnWidth}px`), fillerColumn].join(' ')
+};
+
+const sortState = ref<{ column: string | null; direction: SortDirection }>({
+    column: null,
+    direction: 'asc'
+});
+
+function compare(a: String | Number, b: String | Number, dataType: number): number {
+    if (dataType === 4) {
+        return Number(a) - Number(b);
+    }
+    return String(a ?? '').localeCompare(String(b ?? ''));
+}
+
+function onSortColumn(sort: { column: Column; index: number }) {
+    if (sortState.value.column === sort.column.name) {
+        sortState.value = {
+            column: sort.column.name,
+            direction: sortState.value.direction === 'asc' ? 'desc' :
+                (sortState.value.direction === 'desc' ? null : 'asc')
+        };
     }
     else {
-        return 'minmax(150px, 3fr)';
+        sortState.value = { column: sort.column.name, direction: 'asc' };
     }
-})].join(' ') };
+    const direction = sortState.value.direction === 'asc' ? 1 : -1;
+    const dataType = sort.column.dataType;
+    table.value.sort((rowA, rowB) => direction *
+        compare(rowA[sort.column.name as keyof Row], rowB[sort.column.name as keyof Row], dataType));
+    for (const column of table.value.columns as Column[]) {
+        column.sort = sortState.value.column !== null &&
+            column.name === sortState.value.column ? sortState.value.direction : null;
+    }
+
+    const columnAfter = table.value.columns[sort.index] as Column;
+    emit('sortColumn', { column: columnAfter, index: sort.index });
+}
 
 </script>
 
 <template>
     <table
-        class="grid min-w-full w-fit"
+        class="grid min-w-full w-full"
         @dragstart.prevent
         ref="tableElement"
         :style="tableStyle"
     >
-        <ResultsHeader :columns="table.columns" :table-element="tableElement" />
+        <ResultsHeader :columns="columnsForHeader" :table-element="tableElement" @sort="onSortColumn" />
         <ResultsBody :queryResult="table" />
     </table>
 </template>
