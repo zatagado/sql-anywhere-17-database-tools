@@ -29,7 +29,7 @@ export class ConnectionManager {
         if (this.stack.some(otherDataSource => otherDataSource.getName() === newDataSource.getName())) {
             this.stack = this.stack.filter(otherDataSource => otherDataSource.getName() !== newDataSource.getName());
         }
-        this.stack.push(newDataSource);
+        this.stack.unshift(newDataSource);
         this.context.globalState.update('dataSources', this.stack);
     }
 
@@ -60,7 +60,7 @@ export class ConnectionManager {
         if (this.stack.some(otherDataSource => 
             otherDataSource.getName() === dataSource.getName() && otherDataSource.getType() === dataSource.getType())) {
             this.stack = this.stack.filter(otherDataSource => otherDataSource.getName() !== dataSource.getName());
-            this.stack.push(dataSource);
+            this.stack.unshift(dataSource);
         }
         else {
             throw new Error(`DataSource ${dataSource.getName()} not found in stack`);
