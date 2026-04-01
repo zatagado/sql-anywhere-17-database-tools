@@ -15,7 +15,7 @@ import { ResultsRest } from '../../rest/results/resultsRest';
 
 export type ResultsEntry = {
     editor: TextEditor;
-    dataSource: DataSource;
+    dataSource: DataSource | null;
     panels: WebviewPanel[];
 };
 
@@ -68,7 +68,7 @@ export function activate(context: ExtensionContext): Disposable[] {
         const queries: string = document.getText(editor.selection.isEmpty ? undefined : editor.selection);
 
         let resultEntry: ResultsEntry | undefined = Results.map.get(editorKey);
-        const hadExistingDataSource = resultEntry?.dataSource !== undefined;
+        const hadExistingDataSource = (resultEntry?.dataSource ?? null) !== null;
         let dataSource: DataSource | null = selectedDataSource ?? resultEntry?.dataSource ?? null;
         if (!dataSource) {
             dataSource = await selectDatasource(context);
@@ -77,7 +77,10 @@ export function activate(context: ExtensionContext): Disposable[] {
             }
         }
 
-        if (!resultEntry) {
+        if (resultEntry) {
+            resultEntry.dataSource = dataSource;
+        }
+        else {
             const sqlDocumentUri = document.uri.toString();
             const onThisSqlDocumentClosed = workspace.onDidCloseTextDocument(doc => {
                 if (doc.uri.toString() !== sqlDocumentUri) {
@@ -120,6 +123,9 @@ export function activate(context: ExtensionContext): Disposable[] {
                     return;
                 }
                 entry.panels = entry.panels.filter(mapPanel => mapPanel !== newPanel);
+                if (entry.panels.length === 0) {
+                    entry.dataSource = null;
+                }
             });
             newPanel.webview.html = getResultsWebviewHtml(newPanel, context.extensionUri);
             resultEntry.panels.push(newPanel);
