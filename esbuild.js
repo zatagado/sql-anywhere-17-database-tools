@@ -51,6 +51,21 @@ const nativeModulePlugin = {
 		build.onEnd(() => {
 			const src = path.join(__dirname, 'node_modules', 'odbc', 'lib', 'bindings', 'napi-v8', 'odbc.node');
 			const dest = path.join(__dirname, 'dist', 'odbc.node');
+			try {
+				fs.unlinkSync(dest);
+			} catch (/** @type {any} */ e) {
+				if (e.code !== 'ENOENT') {
+					const srcStat = fs.statSync(src);
+					try {
+						const destStat = fs.statSync(dest);
+						if (srcStat.size === destStat.size && srcStat.mtimeMs <= destStat.mtimeMs) {
+							console.log('[native-module] odbc.node is locked but already up to date — skipping copy');
+							return;
+						}
+					} catch { /* dest gone — will copy below */ }
+					throw e;
+				}
+			}
 			fs.copyFileSync(src, dest);
 		});
 	},

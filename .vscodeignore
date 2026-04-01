@@ -5,6 +5,7 @@ node_modules/**
 src/**
 !src/sql/**
 web/**
+!web/dist/**
 .gitignore
 .yarnrc
 esbuild.js
