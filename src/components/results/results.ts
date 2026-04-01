@@ -12,8 +12,14 @@ import { DataSource } from '../../manager/connectionManager';
 import { selectDatasource } from '../selection/datasourcePick';
 import { ResultsRest } from '../../rest/results/resultsRest';
 
+export type ResultsEntry = {
+    editor: TextEditor;
+    dataSource: DataSource;
+    panels: WebviewPanel[];
+};
+
 export class Results {
-    static map = new Map<string, { editor: TextEditor, dataSource: DataSource }>();
+    static map = new Map<string, ResultsEntry>();
 }
 
 function getResultsWebviewHtml(panel: WebviewPanel, extensionUri: Uri): string {
@@ -60,26 +66,60 @@ export function activate(context: ExtensionContext): Disposable[] {
         // TODO get the short name. if it already exists, change both panel titles to the workspace relative path.
         const queries: string = document.getText(editor.selection.isEmpty ? undefined : editor.selection);
 
-        const existingResult = Results.map.get(editorKey);
-        let dataSource: DataSource | null = selectedDataSource ?? existingResult?.dataSource ?? null;
+        let resultEntry: ResultsEntry | undefined = Results.map.get(editorKey);
+        const hadExistingDataSource = resultEntry?.dataSource !== undefined;
+        let dataSource: DataSource | null = selectedDataSource ?? resultEntry?.dataSource ?? null;
         if (!dataSource) {
             dataSource = await selectDatasource(context);
+            if (!dataSource) {
+                return;
+            }
         }
 
-        if (!dataSource) {
-            return;
+        if (!resultEntry) {
+            resultEntry = {
+                editor: editor,
+                dataSource: dataSource,
+                panels: []
+            };
+            Results.map.set(editorKey, resultEntry); // TODO on the sql file being closed, dispose of the Result map entry.
         }
-        Results.map.set(editorKey, { editor, dataSource });
+
+        // Need to create at least one panel to indicate we are loading.
         const panelTitle = `${dataSource.getName()} - ${shortName}`;
-        // TODO figure out where the viewcolumn should be based on the document position.
-        const panel = window.createWebviewPanel('webview', panelTitle, ViewColumn.One, {
-            enableScripts: true,
-            retainContextWhenHidden: true
-        });
+        if (resultEntry.panels.length === 0) {
+            await window.showTextDocument(editor.document, {
+                viewColumn: editor.viewColumn ?? ViewColumn.Active
+            });
+            await commands.executeCommand('workbench.action.newGroupBelow');
+            const newPanel = window.createWebviewPanel('webview', panelTitle,
+                { viewColumn: ViewColumn.Active },
+                {
+                    enableScripts: true,
+                    retainContextWhenHidden: true
+                }
+            );
 
-        panel.webview.html = getResultsWebviewHtml(panel, context.extensionUri);
+            newPanel.onDidDispose(() => {
+                const entry = Results.map.get(editorKey)!;
+                entry.panels = entry.panels.filter(mapPanel => mapPanel !== newPanel);
+            });
+            newPanel.webview.html = getResultsWebviewHtml(newPanel, context.extensionUri);
+            resultEntry.panels.push(newPanel);
+        }
+        else {
+            // Dispose of all panels that are not the first one.
+            while (resultEntry.panels.length > 1) {
+                resultEntry.panels.pop()!.dispose();
+            }
+            resultEntry.panels = [resultEntry.panels[0]!];
+            resultEntry.panels[0]!.title = panelTitle;
+        }
 
-        ResultsRest.executeScript(dataSource, queries, existingResult ? false : true).then(result => {
+        const panel = resultEntry.panels[0]!; 
+        panel.webview.postMessage({ type: 'onQueryLoading' });
+
+        ResultsRest.executeScript(dataSource, queries, !hadExistingDataSource).then(result => {
             panel.webview.postMessage({
                 type: 'onQueryResult',
                 rows: result,
@@ -89,11 +129,16 @@ export function activate(context: ExtensionContext): Disposable[] {
                 return: result.return,
                 parameters: result.parameters
             });
+        }, err => {
+            panel.webview.postMessage({
+                type: 'onQueryError',
+                message: err instanceof Error ? err.message : String(err)
+            });
         });
     }
 
     async function execute() {
-        await resultsView(null);
+        await resultsView();
     }
 
     async function executeWithDatasource() {
