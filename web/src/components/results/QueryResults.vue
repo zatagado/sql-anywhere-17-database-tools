@@ -43,14 +43,15 @@ window.addEventListener('message', (event) => {
         <div v-if="loading" class="loading-msg" role="status">
             Running query…
         </div>
-        <ResultsTable v-else-if="queryResult" :queryResult="queryResult" />
+        <ResultsTable v-else-if="queryResult && queryResult.length > 0" :queryResult="queryResult" />
         <div v-else-if="queryError" class="error-msg">{{ queryError }}</div>
-        <div v-else>No result set for this query.</div>
+        <div v-else class="empty-msg" role="status">No result set.</div>
     </div>
 </template>
 
 <style scoped>
 .loading-msg,
+.empty-msg,
 .error-msg {
     padding: 1rem;
     color: var(--vscode-foreground);

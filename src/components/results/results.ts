@@ -6,7 +6,8 @@ import {
     ViewColumn,
     Uri,
     WebviewPanel,
-    window
+    window,
+    workspace
 } from 'vscode';
 import { DataSource } from '../../manager/connectionManager';
 import { selectDatasource } from '../selection/datasourcePick';
@@ -77,12 +78,25 @@ export function activate(context: ExtensionContext): Disposable[] {
         }
 
         if (!resultEntry) {
+            const sqlDocumentUri = document.uri.toString();
+            const onThisSqlDocumentClosed = workspace.onDidCloseTextDocument(doc => {
+                if (doc.uri.toString() !== sqlDocumentUri) {
+                    return;
+                }
+                if (!Results.map.has(editorKey)) {
+                    return;
+                }
+                Results.map.delete(editorKey);
+                onThisSqlDocumentClosed.dispose(); // TODO does this dispose for just the one document, or all of them?
+            });
+            context.subscriptions.push(onThisSqlDocumentClosed);
+
             resultEntry = {
                 editor: editor,
                 dataSource: dataSource,
                 panels: []
             };
-            Results.map.set(editorKey, resultEntry); // TODO on the sql file being closed, dispose of the Result map entry.
+            Results.map.set(editorKey, resultEntry);
         }
 
         // Need to create at least one panel to indicate we are loading.
@@ -101,7 +115,10 @@ export function activate(context: ExtensionContext): Disposable[] {
             );
 
             newPanel.onDidDispose(() => {
-                const entry = Results.map.get(editorKey)!;
+                const entry = Results.map.get(editorKey);
+                if (!entry) {
+                    return;
+                }
                 entry.panels = entry.panels.filter(mapPanel => mapPanel !== newPanel);
             });
             newPanel.webview.html = getResultsWebviewHtml(newPanel, context.extensionUri);
@@ -132,7 +149,7 @@ export function activate(context: ExtensionContext): Disposable[] {
         }, err => {
             panel.webview.postMessage({
                 type: 'onQueryError',
-                message: err instanceof Error ? err.message : String(err)
+                message: ResultsRest.formatExecutionError(err)
             });
         });
     }
