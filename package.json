@@ -3,7 +3,7 @@
     "publisher": "sql-anywhere-17-database-tools",
     "displayName": "SQL Anywhere 17 Database Tools",
     "description": "",
-    "version": "0.0.1",
+    "version": "0.0.4",
     "engines": {
         "vscode": "^1.105.0"
     },
@@ -39,6 +39,14 @@
                 }
             },
             {
+                "command": "sql-anywhere-17-database-tools.executeWithDatasource",
+                "title": "Execute with Datasource",
+                "icon": {
+                    "light": "resources/light/execute.svg",
+                    "dark": "resources/dark/execute.svg"
+                }
+            },
+            {
                 "command": "sql-anywhere-17-database-tools.openVirtualDocument",
                 "title": "Open Virtual Document"
             },
@@ -65,6 +73,7 @@
             "editor/title": [
                 {
                     "command": "sql-anywhere-17-database-tools.execute",
+                    "alt": "sql-anywhere-17-database-tools.executeWithDatasource",
                     "when": "editorLangId == sql && !editorReadonly",
                     "group": "navigation"
                 }
@@ -114,12 +123,13 @@
         ]
     },
     "scripts": {
-        "vscode:prepublish": "yarn run package",
+        "vscode:prepublish": "yarn run build:web && yarn run package",
         "compile": "yarn run check-types && yarn run lint && node esbuild.js",
         "watch": "npm-run-all -p watch:*",
         "watch:esbuild": "node esbuild.js --watch",
         "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
         "package": "yarn run check-types && yarn run lint && node esbuild.js --production",
+        "build:web": "yarn --cwd web run build-only",
         "compile-tests": "tsc -p . --outDir out",
         "watch-tests": "tsc -p . -w --outDir out",
         "pretest": "yarn run compile-tests && yarn run compile && yarn run lint",

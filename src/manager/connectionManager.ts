@@ -82,6 +82,7 @@ export class ConnectionManager {
         if (updateRecent) {
             this.updateRecentStack(dataSource);
         }
+        // TODO look into the cursor
         return dataSource.getConnection().then(connection =>
             connection.query(query).catch(() =>
                 dataSource.reconnect().then(newConnection => newConnection.query(query))
