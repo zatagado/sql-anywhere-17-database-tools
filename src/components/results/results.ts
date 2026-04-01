@@ -8,7 +8,7 @@ import {
     WebviewPanel,
     window
 } from 'vscode';
-import { ConnectionManager, DataSource } from '../../manager/connectionManager';
+import { DataSource } from '../../manager/connectionManager';
 import { selectDatasource } from '../selection/datasourcePick';
 import { ResultsRest } from '../../rest/results/resultsRest';
 
@@ -46,7 +46,7 @@ function getResultsWebviewHtml(panel: WebviewPanel, extensionUri: Uri): string {
 
 export function activate(context: ExtensionContext): Disposable[] {
 
-    function resultsView(selectedDataSource: DataSource | null = null) {
+    async function resultsView(selectedDataSource: DataSource | null = null) {
         // TODO depending on the number of queries, create multiple panels
         const editor = window.activeTextEditor;
         if (!editor) {
@@ -59,9 +59,12 @@ export function activate(context: ExtensionContext): Disposable[] {
         const shortName = file.path.split('/').pop()!;
         // TODO get the short name. if it already exists, change both panel titles to the workspace relative path.
         const queries: string = document.getText(editor.selection.isEmpty ? undefined : editor.selection);
-        
+
         const existingResult = Results.map.get(editorKey);
-        const dataSource = selectedDataSource ?? existingResult?.dataSource ?? ConnectionManager.getDataSources()[0];
+        let dataSource: DataSource | null = selectedDataSource ?? existingResult?.dataSource ?? null;
+        if (!dataSource) {
+            dataSource = await selectDatasource(context);
+        }
 
         if (!dataSource) {
             return;
@@ -89,13 +92,13 @@ export function activate(context: ExtensionContext): Disposable[] {
         });
     }
 
-    function execute() {
-        resultsView(null);
+    async function execute() {
+        await resultsView(null);
     }
 
     async function executeWithDatasource() {
         const dataSource = await selectDatasource(context);
-        resultsView(dataSource);
+        await resultsView(dataSource);
     }
 
     return [
