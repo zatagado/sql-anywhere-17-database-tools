@@ -7,7 +7,8 @@ import {
     Uri,
     WebviewPanel,
     window,
-    workspace
+    workspace,
+    TextDocument
 } from 'vscode';
 import { DataSource } from '../../manager/connectionManager';
 import { selectDatasource } from '../selection/datasourcePick';
@@ -20,7 +21,7 @@ export type ResultsEntry = {
 };
 
 export class Results {
-    static map = new Map<string, ResultsEntry>();
+    static map = new Map<TextDocument, ResultsEntry>();
 }
 
 function getResultsWebviewHtml(panel: WebviewPanel, extensionUri: Uri): string {
@@ -51,6 +52,13 @@ function getResultsWebviewHtml(panel: WebviewPanel, extensionUri: Uri): string {
 // TODO make a class to keep track of the results views and their editors. if an existing editor is passed in, clear all unused panels for that editor.
 // TODO make it a map of the full path of the file to the panel.
 
+export async function selectObject(dataSource: DataSource, objectName: string): Promise<void> {
+    const sql = ResultsRest.getSelectFromObjectEditorSql(dataSource, objectName);
+    const doc = await workspace.openTextDocument({ language: 'sql', content: sql });
+    await window.showTextDocument(doc);
+    await commands.executeCommand('sql-anywhere-17-database-tools.execute', dataSource);
+}
+
 export function activate(context: ExtensionContext): Disposable[] {
 
     async function resultsView(selectedDataSource: DataSource | null = null) {
@@ -61,13 +69,12 @@ export function activate(context: ExtensionContext): Disposable[] {
         }
 
         const document = editor.document;
-        const editorKey = document.fileName;
         const file = Uri.file(document.fileName);
         const shortName = file.path.split('/').pop()!;
         // TODO get the short name. if it already exists, change both panel titles to the workspace relative path.
         const queries: string = document.getText(editor.selection.isEmpty ? undefined : editor.selection);
 
-        let resultEntry: ResultsEntry | undefined = Results.map.get(editorKey);
+        let resultEntry: ResultsEntry | undefined = Results.map.get(document);
         const hadExistingDataSource = (resultEntry?.dataSource ?? null) !== null;
         let dataSource: DataSource | null = selectedDataSource ?? resultEntry?.dataSource ?? null;
         if (!dataSource) {
@@ -86,10 +93,10 @@ export function activate(context: ExtensionContext): Disposable[] {
                 if (doc.uri.toString() !== sqlDocumentUri) {
                     return;
                 }
-                if (!Results.map.has(editorKey)) {
+                if (!Results.map.has(document)) {
                     return;
                 }
-                Results.map.delete(editorKey);
+                Results.map.delete(document);
                 onThisSqlDocumentClosed.dispose(); // TODO does this dispose for just the one document, or all of them?
             });
             context.subscriptions.push(onThisSqlDocumentClosed);
@@ -99,7 +106,7 @@ export function activate(context: ExtensionContext): Disposable[] {
                 dataSource: dataSource,
                 panels: []
             };
-            Results.map.set(editorKey, resultEntry);
+            Results.map.set(document, resultEntry);
         }
 
         // Need to create at least one panel to indicate we are loading.
@@ -118,7 +125,7 @@ export function activate(context: ExtensionContext): Disposable[] {
             );
 
             newPanel.onDidDispose(() => {
-                const entry = Results.map.get(editorKey);
+                const entry = Results.map.get(document);
                 if (!entry) {
                     return;
                 }
@@ -139,7 +146,8 @@ export function activate(context: ExtensionContext): Disposable[] {
             resultEntry.panels[0]!.title = panelTitle;
         }
 
-        const panel = resultEntry.panels[0]!; 
+        const panel = resultEntry.panels[0]!;
+        panel.reveal(panel.viewColumn, false);
         panel.webview.postMessage({ type: 'onQueryLoading' });
 
         ResultsRest.executeScript(dataSource, queries, !hadExistingDataSource).then(result => {
@@ -160,17 +168,15 @@ export function activate(context: ExtensionContext): Disposable[] {
         });
     }
 
-    async function execute() {
-        await resultsView();
-    }
-
-    async function executeWithDatasource() {
-        const dataSource = await selectDatasource(context);
+    async function execute(dataSource?: DataSource) {
         await resultsView(dataSource);
     }
 
     return [
         commands.registerCommand('sql-anywhere-17-database-tools.execute', execute),
-        commands.registerCommand('sql-anywhere-17-database-tools.executeWithDatasource', executeWithDatasource)
+        commands.registerCommand('sql-anywhere-17-database-tools.executeWithDatasource', async () => {
+            const dataSource = await selectDatasource(context);
+            await execute(dataSource!);
+        })
     ];
 }

@@ -2,9 +2,14 @@
     "name": "SQL Anywhere 17",
     "navigation": {
         "databaseTree": {
-            "tables": "SELECT TOP $limit START AT ($offset + 1) STRING(user_name, '.', table_name) AS TableName FROM SYS.SYSTABLE LEFT JOIN SYS.SYSUSER ON creator = user_id WHERE table_type = 'BASE' AND user_name NOT IN ('SYS', 'dbo') ORDER BY user_name, table_name;",
-            "views": "SELECT TOP $limit START AT ($offset + 1) STRING(vcreator, '.', viewname) AS ViewName FROM SYS.SYSVIEWS WHERE vcreator NOT IN ('SYS', 'dbo') ORDER BY vcreator, viewname;",
-            "procedures": "SELECT TOP $limit START AT ($offset + 1) STRING(user_name, '.', proc_name) AS ProcedureName FROM SYS.SYSPROCEDURE LEFT JOIN SYS.SYSUSER ON creator = user_id WHERE user_name NOT IN ('SYS', 'dbo') ORDER BY user_name, proc_name;"
+            "tables": "SELECT STRING(user_name, '.', table_name) AS TableName FROM SYS.SYSTABLE LEFT JOIN SYS.SYSUSER ON creator = user_id WHERE table_type = 'BASE' AND user_name NOT IN ('SYS', 'dbo') ORDER BY user_name, table_name;",
+            "views": "SELECT STRING(vcreator, '.', viewname) AS ViewName FROM SYS.SYSVIEWS WHERE vcreator NOT IN ('SYS', 'dbo') ORDER BY vcreator, viewname;",
+            "procedures": "SELECT STRING(user_name, '.', proc_name) AS ProcedureName FROM SYS.SYSPROCEDURE LEFT JOIN SYS.SYSUSER ON creator = user_id WHERE user_name NOT IN ('SYS', 'dbo') ORDER BY user_name, proc_name;"
+        },
+        "searchPick": {
+            "tables": "SELECT STRING(user_name, '.', table_name) AS TableName FROM SYS.SYSTABLE LEFT JOIN SYS.SYSUSER ON creator = user_id WHERE table_type = 'BASE' AND user_name NOT IN ('SYS', 'dbo') ORDER BY user_name, table_name;",
+            "views": "SELECT STRING(vcreator, '.', viewname) AS ViewName FROM SYS.SYSVIEWS WHERE vcreator NOT IN ('SYS', 'dbo') ORDER BY vcreator, viewname;",
+            "procedures": "SELECT STRING(user_name, '.', proc_name) AS ProcedureName FROM SYS.SYSPROCEDURE LEFT JOIN SYS.SYSUSER ON creator = user_id WHERE user_name NOT IN ('SYS', 'dbo') ORDER BY user_name, proc_name;"
         }
     },
     "preview": {
@@ -13,5 +18,8 @@
             "view": "SELECT viewtext AS ViewDefinition FROM SYS.SYSVIEWS WHERE STRING(vcreator, '.', viewname) = $viewName",
             "procedure": "SELECT proc_defn AS ProcedureDefinition FROM SYS.SYSPROCEDURE INNER JOIN SYS.SYSUSER ON SYSPROCEDURE.creator = SYSUSER.user_id WHERE STRING(SYSUSER.user_name, '.', SYSPROCEDURE.proc_name) = $procedureName"
         }
+    },
+    "results": {
+        "selectFromObject": "SELECT * FROM $objectName;"
     }
 }

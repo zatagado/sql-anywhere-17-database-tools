@@ -2,6 +2,7 @@ import * as databaseTree from './components/navigation/databaseTree';
 import * as datasourcePick from './components/selection/datasourcePick';
 import * as databaseObject from './components/preview/object';
 import * as results from './components/results/results';
+import * as searchPick from './components/search/searchPick';
 import * as test from './components/results/test';
 import * as connectionManager from './manager/connectionManager';
 import * as sqlManager from './manager/sqlManager';
@@ -33,7 +34,9 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('sql-anywhere-17-database-tools.removeDatasource',
             () => datasourcePick.removeDatasource(context)),
         ...databaseObject.activate(),
+        ...databaseTree.activate(),
         ...results.activate(context),
+        ...searchPick.activate(context),
         ...test.activate(context)
     );
 }
