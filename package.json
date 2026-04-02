@@ -64,7 +64,7 @@
             },
             {
                 "command": "sql-anywhere-17-database-tools.searchDatabase",
-                "title": "Search Database"
+                "title": "Search: Database"
             },
             {
                 "command": "results.selectObject",
