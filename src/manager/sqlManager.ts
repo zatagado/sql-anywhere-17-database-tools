@@ -4,10 +4,21 @@ import {
     workspace
 } from "vscode";
 
+export enum DatabaseObjectType {
+    Table = 'Table',
+    View = 'View',
+    Procedure = 'Procedure',
+}
+
 export interface Sql {
     name: string;
     navigation: {
         databaseTree: {
+            tables: string;
+            views: string;
+            procedures: string;
+        };
+        searchPick: {
             tables: string;
             views: string;
             procedures: string;
@@ -19,6 +30,9 @@ export interface Sql {
             view: string;
             procedure: string;
         };
+    };
+    results: {
+        selectFromObject: string;
     };
 }
 

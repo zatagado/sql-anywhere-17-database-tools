@@ -3,7 +3,7 @@
     "publisher": "sql-anywhere-17-database-tools",
     "displayName": "SQL Anywhere 17 Database Tools",
     "description": "",
-    "version": "0.0.7",
+    "version": "0.0.8",
     "engines": {
         "vscode": "^1.105.0"
     },
@@ -61,12 +61,24 @@
             {
                 "command": "sql-anywhere-17-database-tools.test",
                 "title": "Open Test Webview"
+            },
+            {
+                "command": "sql-anywhere-17-database-tools.searchDatabase",
+                "title": "Search: Database"
+            },
+            {
+                "command": "results.selectObject",
+                "title": "Select"
             }
         ],
         "menus": {
             "commandPalette": [
                 {
                     "command": "_databaseTree.removeDatasource",
+                    "when": "false"
+                },
+                {
+                    "command": "results.selectObject",
                     "when": "false"
                 }
             ],
@@ -93,6 +105,11 @@
                 {
                     "command": "_databaseTree.removeDatasource",
                     "when": "view == databaseTree && viewItem == databaseItem"
+                },
+                {
+                    "command": "results.selectObject",
+                    "when": "view == databaseTree && (viewItem == tableObjectItem || viewItem == viewObjectItem)",
+                    "group": "navigation"
                 }
             ]
         },
