@@ -3,7 +3,7 @@
     "publisher": "sql-anywhere-17-database-tools",
     "displayName": "SQL Anywhere 17 Database Tools",
     "description": "",
-    "version": "0.0.8",
+    "version": "0.0.9",
     "engines": {
         "vscode": "^1.105.0"
     },
@@ -40,7 +40,7 @@
             },
             {
                 "command": "sql-anywhere-17-database-tools.results.execute",
-                "title": "Tasks: Execute",
+                "title": "Tasks: Execute SQL",
                 "icon": {
                     "light": "resources/light/execute.svg",
                     "dark": "resources/dark/execute.svg"
@@ -48,7 +48,7 @@
             },
             {
                 "command": "sql-anywhere-17-database-tools.results.executeWithDatasource",
-                "title": "Tasks: Execute with Datasource",
+                "title": "Tasks: Execute SQL with Datasource",
                 "icon": {
                     "light": "resources/light/execute.svg",
                     "dark": "resources/dark/execute.svg"

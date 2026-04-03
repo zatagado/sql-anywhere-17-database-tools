@@ -29,7 +29,7 @@ defineProps<{
             :column="column"
             :value="row[column.name]"
         />
-        <td class="filler-cell" aria-hidden="true"></td>
+        <td class="filler-cell"></td>
     </tr>
 </template>
 
