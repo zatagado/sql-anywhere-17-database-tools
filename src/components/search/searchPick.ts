@@ -107,7 +107,7 @@ export async function pickSearchObject(_context: ExtensionContext): Promise<Sear
             {
                 location: ProgressLocation.Notification,
                 title: `Loading objects (${dataSource.getName()})…`,
-                cancellable: false
+                cancellable: true
             },
             () => loadObjectItems(dataSource)
         );
