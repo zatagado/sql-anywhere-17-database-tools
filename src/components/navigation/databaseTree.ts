@@ -181,7 +181,7 @@ export class TypesItem extends DatabaseTreeItem {
                         },
                         this,
                         {
-                            command: 'databaseObjectView.open',
+                            command: '_sql-anywhere-17-database-tools.preview.openVirtualDocument',
                             title: ''
                         }
                     );
@@ -200,7 +200,7 @@ export class TypesItem extends DatabaseTreeItem {
                         },
                         this,
                         {
-                            command: 'databaseObjectView.open',
+                            command: '_sql-anywhere-17-database-tools.preview.openVirtualDocument',
                             title: ''
                         }
                     );
@@ -219,7 +219,7 @@ export class TypesItem extends DatabaseTreeItem {
                         },
                         this,
                         {
-                            command: 'databaseObjectView.open',
+                            command: '_sql-anywhere-17-database-tools.preview.openVirtualDocument',
                             title: ''
                         }
                     );
@@ -265,9 +265,9 @@ export class ObjectItem extends DatabaseTreeItem {
 
 export function activate(): Disposable[] {
     return [
-        commands.registerCommand('databaseObjectView.open', (node: ObjectItem) =>
+        commands.registerCommand('_sql-anywhere-17-database-tools.preview.openVirtualDocument', (node: ObjectItem) =>
             openDatabaseObject(node.getDataSource(), node.getType(), node.label as string)),
-        commands.registerCommand('results.selectObject',
+        commands.registerCommand('_sql-anywhere-17-database-tools.databaseTree.select',
             (node: ObjectItem) => selectObject(node.getDataSource(), node.label as string))
     ];
 }

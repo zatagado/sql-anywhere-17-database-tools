@@ -146,7 +146,7 @@ export async function pickSearchObject(_context: ExtensionContext): Promise<Sear
 
 export function activate(context: ExtensionContext): Disposable[] {
     return [
-        commands.registerCommand('sql-anywhere-17-database-tools.searchDatabase', async () => {
+        commands.registerCommand('sql-anywhere-17-database-tools.search', async () => {
             const result = await pickSearchObject(context);
             if (result) {
                 await openDatabaseObject(result.dataSource, result.type, result.name);

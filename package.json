@@ -15,15 +15,19 @@
     "contributes": {
         "commands": [
             {
-                "command": "databaseTree.addDatasource",
+                "command": "sql-anywhere-17-database-tools.datasource.addDatasource",
                 "title": "Add Datasource"
             },
             {
-                "command": "_databaseTree.removeDatasource",
+                "command": "sql-anywhere-17-database-tools.datasource.removeDatasource",
                 "title": "Remove Datasource"
             },
             {
-                "command": "databaseTree.refresh",
+                "command": "_sql-anywhere-17-database-tools.databaseTree.removeDatasource",
+                "title": "Remove Datasource"
+            },
+            {
+                "command": "_sql-anywhere-17-database-tools.databaseTree.refresh",
                 "title": "Refresh",
                 "icon": {
                     "light": "resources/light/refresh.svg",
@@ -31,83 +35,91 @@
                 }
             },
             {
-                "command": "sql-anywhere-17-database-tools.execute",
-                "title": "Execute",
+                "command": "_sql-anywhere-17-database-tools.databaseTree.select",
+                "title": "Select"
+            },
+            {
+                "command": "sql-anywhere-17-database-tools.results.execute",
+                "title": "Tasks: Execute",
                 "icon": {
                     "light": "resources/light/execute.svg",
                     "dark": "resources/dark/execute.svg"
                 }
             },
             {
-                "command": "sql-anywhere-17-database-tools.executeWithDatasource",
-                "title": "Execute with Datasource",
+                "command": "sql-anywhere-17-database-tools.results.executeWithDatasource",
+                "title": "Tasks: Execute with Datasource",
                 "icon": {
                     "light": "resources/light/execute.svg",
                     "dark": "resources/dark/execute.svg"
                 }
             },
             {
-                "command": "sql-anywhere-17-database-tools.openVirtualDocument",
-                "title": "Open Virtual Document"
-            },
-            {
-                "command": "sql-anywhere-17-database-tools.removeDatasource",
-                "title": "Remove Datasource"
-            },
-            {
-                "command": "sql-anywhere-17-database-tools.results",
+                "command": "_sql-anywhere-17-database-tools.results",
                 "title": "Open Results Webview"
             },
             {
-                "command": "sql-anywhere-17-database-tools.test",
-                "title": "Open Test Webview"
+                "command": "_sql-anywhere-17-database-tools.preview.openVirtualDocument",
+                "title": "Open Virtual Document"
             },
             {
-                "command": "sql-anywhere-17-database-tools.searchDatabase",
+                "command": "sql-anywhere-17-database-tools.search",
                 "title": "Search: Database"
             },
             {
-                "command": "results.selectObject",
-                "title": "Select"
+                "command": "sql-anywhere-17-database-tools.newScratchSqlFile",
+                "title": "File: New Scratch SQL File..."
             }
         ],
         "menus": {
             "commandPalette": [
                 {
-                    "command": "_databaseTree.removeDatasource",
+                    "command": "_sql-anywhere-17-database-tools.databaseTree.refresh",
                     "when": "false"
                 },
                 {
-                    "command": "results.selectObject",
+                    "command": "_sql-anywhere-17-database-tools.databaseTree.removeDatasource",
+                    "when": "false"
+                },
+                {
+                    "command": "_sql-anywhere-17-database-tools.databaseTree.select",
+                    "when": "false"
+                },
+                {
+                    "command": "_sql-anywhere-17-database-tools.preview.openVirtualDocument",
+                    "when": "false"
+                },
+                {
+                    "command": "_sql-anywhere-17-database-tools.results",
                     "when": "false"
                 }
             ],
             "editor/title": [
                 {
-                    "command": "sql-anywhere-17-database-tools.execute",
-                    "alt": "sql-anywhere-17-database-tools.executeWithDatasource",
+                    "command": "sql-anywhere-17-database-tools.results.execute",
+                    "alt": "sql-anywhere-17-database-tools.results.executeWithDatasource",
                     "when": "editorLangId == sql && !editorReadonly",
                     "group": "navigation"
                 }
             ],
             "view/title": [
                 {
-                    "command": "databaseTree.addDatasource",
+                    "command": "sql-anywhere-17-database-tools.datasource.addDatasource",
                     "when": "view == databaseTree"
                 },
                 {
-                    "command": "databaseTree.refresh",
+                    "command": "_sql-anywhere-17-database-tools.databaseTree.refresh",
                     "when": "view == databaseTree",
                     "group": "navigation"
                 }
             ],
             "view/item/context": [
                 {
-                    "command": "_databaseTree.removeDatasource",
+                    "command": "_sql-anywhere-17-database-tools.databaseTree.removeDatasource",
                     "when": "view == databaseTree && viewItem == databaseItem"
                 },
                 {
-                    "command": "results.selectObject",
+                    "command": "_sql-anywhere-17-database-tools.databaseTree.select",
                     "when": "view == databaseTree && (viewItem == tableObjectItem || viewItem == viewObjectItem)",
                     "group": "navigation"
                 }
