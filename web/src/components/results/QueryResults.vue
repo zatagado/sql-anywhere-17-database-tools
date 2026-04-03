@@ -66,7 +66,7 @@ window.addEventListener('message', (event) => {
     height: 48px;
     flex-shrink: 0;
     background-color: var(--vscode-foreground);
-    mask-image: url('../../../resources/dark/loading.svg');
+    mask-image: url('../../../resources/loading.svg');
     mask-position: center;
     mask-repeat: no-repeat;
     mask-size: contain;

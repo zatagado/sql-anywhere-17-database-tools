@@ -96,7 +96,7 @@ button:focus {
     flex-shrink: 0;
     height: 17px;
     margin: 0 10px;
-    mask-image: url('../../../resources/carat.svg');
+    mask-image: url('../../../resources/chevron.svg');
     mask-position: center;
     mask-repeat: no-repeat;
     mask-size: contain;
