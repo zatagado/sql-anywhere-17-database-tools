@@ -1,6 +1,20 @@
 import * as odbc from 'odbc';
 import { ExtensionContext } from 'vscode';
 
+let lastOdbcDebugLogMs = Date.now();
+
+function odbcDebugLog(message: string): void {
+    const now = Date.now();
+    const deltaMs = now - lastOdbcDebugLogMs;
+    lastOdbcDebugLogMs = now;
+    console.log(`[odbc] ${message} (+${deltaMs}ms since last log)`);
+}
+
+/** Return a pooled connection to the node-odbc pool (`close` is the pool’s recycle hook). */
+function releaseConnection(connection: odbc.Connection): Promise<void> {
+    return connection.close().catch(() => undefined);
+}
+
 export class ConnectionManager {
 
     // TODO removing a datasource should trigger an event that tree will need to subscribe to
@@ -71,10 +85,16 @@ export class ConnectionManager {
         if (updateRecent) {
             this.updateRecentStack(dataSource);
         }
+        const name = dataSource.getName();
+        odbcDebugLog(`ConnectionManager.prepare start "${name}"`);
         return dataSource.getConnection().then(connection =>
-            PreparedStatement.create(connection, query).catch(() =>
-                dataSource.reconnect().then(newConnection => PreparedStatement.create(newConnection, query))
-            )
+            PreparedStatement.create(connection, query).catch(() => {
+                odbcDebugLog(`ConnectionManager.prepare create failed "${name}", reconnect`);
+                return dataSource.reconnect().then(newConnection => PreparedStatement.create(newConnection, query));
+            }).then(ps => {
+                odbcDebugLog(`ConnectionManager.prepare done "${name}"`);
+                return ps;
+            })
         );
     }
 
@@ -82,18 +102,48 @@ export class ConnectionManager {
         if (updateRecent) {
             this.updateRecentStack(dataSource);
         }
-        // TODO look into the cursor
-        return dataSource.getConnection().then(connection =>
-            connection.query(query).catch(() =>
-                dataSource.reconnect().then(newConnection => newConnection.query(query))
-            )
-        );
+        const name = dataSource.getName();
+        odbcDebugLog(`ConnectionManager.execute start "${name}"`);
+        return dataSource.getConnection().then(connection => {
+            odbcDebugLog(`ConnectionManager.execute query start "${name}"`);
+            const queryStartMs = Date.now();
+            return connection.query(query).then(
+                result => {
+                    odbcDebugLog(
+                        `ConnectionManager.execute query done "${name}" queryTime=${Date.now() - queryStartMs}ms`
+                    );
+                    return releaseConnection(connection).then(() => result);
+                },
+                () => {
+                    odbcDebugLog(
+                        `ConnectionManager.execute query failed "${name}" after ${Date.now() - queryStartMs}ms, reconnect`
+                    );
+                    return releaseConnection(connection).then(() =>
+                        dataSource.reconnect().then(newConnection => {
+                            odbcDebugLog(`ConnectionManager.execute retry query start "${name}"`);
+                            const retryStartMs = Date.now();
+                            return newConnection.query(query).then(
+                                r => {
+                                    odbcDebugLog(
+                                        `ConnectionManager.execute retry query done "${name}" queryTime=${Date.now() - retryStartMs}ms`
+                                    );
+                                    return releaseConnection(newConnection).then(() => r);
+                                },
+                                err => releaseConnection(newConnection).then(() => Promise.reject(err))
+                            );
+                        })
+                    );
+                }
+            );
+        });
     }
 }
 
 export class DataSource {
     private static readonly MAX_RECONNECT_ATTEMPTS = 3;
     private static readonly RECONNECT_DELAY_MS = 1000;
+    /** `pool.close()` can block for minutes on a dead ODBC pool; cap wait so reconnect can create a new pool. */
+    private static readonly POOL_CLOSE_TIMEOUT_MS = 15_000;
 
     private name: string;
     private type: string;
@@ -105,20 +155,37 @@ export class DataSource {
     }
 
     private async getPool(): Promise<odbc.Pool> {
-        this.pool = this.pool ?? odbc.pool(`DSN=${this.name}`);
-        return this.pool;
+        odbcDebugLog(`getPool start "${this.name}"`);
+        if (!this.pool) {
+            odbcDebugLog(`getPool creating new pool "${this.name}"`);
+            this.pool = odbc.pool(`DSN=${this.name}`);
+        }
+        const pool = await this.pool;
+        odbcDebugLog(`getPool done "${this.name}"`);
+        return pool;
     }
 
     private async disposePool(): Promise<void> {
         if (this.pool === undefined) {
             return;
         }
+        odbcDebugLog(`disposePool close start "${this.name}"`);
+        const poolPromise = this.pool;
         try {
-            await (await this.pool).close();
+            const pool = await poolPromise;
+            await Promise.race([
+                pool.close(),
+                new Promise<never>((_, reject) =>
+                    setTimeout(
+                        () => reject(new Error(`pool.close timeout after ${DataSource.POOL_CLOSE_TIMEOUT_MS}ms`)),
+                        DataSource.POOL_CLOSE_TIMEOUT_MS
+                    ))
+            ]);
         } catch {
-            // ignore close errors on teardown
+            // close error or timeout — still drop the pool reference
         }
         this.pool = undefined;
+        odbcDebugLog(`disposePool close finished "${this.name}"`);
     }
 
     isConnected(): boolean {
@@ -134,7 +201,9 @@ export class DataSource {
             }
             try {
                 const pool = await this.getPool();
+                odbcDebugLog(`reconnect pool.connect start "${this.name}"`);
                 const connection = await pool.connect();
+                odbcDebugLog(`reconnect pool.connect done "${this.name}"`);
                 return connection;
             } catch (err) {
                 await this.disposePool();
@@ -146,7 +215,13 @@ export class DataSource {
     }
 
     getConnection(): Promise<odbc.Connection> {
-        return this.getPool().then(pool => pool.connect());
+        return this.getPool().then(pool => {
+            odbcDebugLog(`pool.connect start "${this.name}"`);
+            return pool.connect().then(connection => {
+                odbcDebugLog(`pool.connect done "${this.name}"`);
+                return connection;
+            });
+        });
     }
 
     getName() {
@@ -171,9 +246,15 @@ export class PreparedStatement {
     }
 
     static create(connection: odbc.Connection, query: string): Promise<PreparedStatement> {
+        odbcDebugLog('PreparedStatement createStatement start');
         return connection.createStatement().then(statement => {
+            odbcDebugLog('PreparedStatement createStatement done');
+            odbcDebugLog('PreparedStatement prepare start');
             const preparedStatement = new PreparedStatement(statement, query);
-            return preparedStatement.statement.prepare(query.replace(/\$\w+/gm, '?')).then(() => preparedStatement);
+            return preparedStatement.statement.prepare(query.replace(/\$\w+/gm, '?')).then(() => {
+                odbcDebugLog('PreparedStatement prepare done');
+                return preparedStatement;
+            });
         });
     }
 
@@ -190,18 +271,24 @@ export class PreparedStatement {
             throw new Error('Not all parameters are bound');
         }
 
-        return this.statement.bind(Array.from(this.parameters.values()).sort(
-            (a, b) => a.position - b.position).map(parameterData => parameterData.value)).then(
-                () => this.statement.execute().then(
-                    result => {
-                        this.statement.close(); // TODO not sure if closing is necessary, or at the end and add explicit close method to prepared statement class
-                        return result;
-                    },
-                    err => {
-                        this.statement.close();
-                        throw err;
-                    }
-                )
+        const values = Array.from(this.parameters.values()).sort(
+            (a, b) => a.position - b.position).map(parameterData => parameterData.value);
+        odbcDebugLog('PreparedStatement bind start');
+        return this.statement.bind(values).then(() => {
+            odbcDebugLog('PreparedStatement bind done');
+            odbcDebugLog('PreparedStatement execute start');
+            return this.statement.execute().then(
+                result => {
+                    odbcDebugLog('PreparedStatement execute done');
+                    this.statement.close(); // TODO not sure if closing is necessary, or at the end and add explicit close method to prepared statement class
+                    return result;
+                },
+                err => {
+                    odbcDebugLog('PreparedStatement execute failed');
+                    this.statement.close();
+                    throw err;
+                }
             );
+        });
     }
 }
