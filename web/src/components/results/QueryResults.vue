@@ -39,9 +39,9 @@ window.addEventListener('message', (event) => {
 </script>
 
 <template>
-    <div class="w-full min-w-0">
-        <div v-if="loading" class="loading-msg" role="status">
-            Running query…
+    <div class="w-full min-w-0 h-full min-h-0">
+        <div v-if="loading" class="loading-container" role="status">
+            <div class="loading-spinner"/>
         </div>
         <ResultsTable v-else-if="queryResult && queryResult.length > 0" :queryResult="queryResult" />
         <div v-else-if="queryError" class="error-msg">{{ queryError }}</div>
@@ -50,15 +50,50 @@ window.addEventListener('message', (event) => {
 </template>
 
 <style scoped>
-.loading-msg,
+.loading-container {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    padding: 1rem;
+}
+
+.loading-spinner {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    background-color: var(--vscode-foreground);
+    mask-image: url('../../../resources/dark/loading.svg');
+    mask-position: center;
+    mask-repeat: no-repeat;
+    mask-size: contain;
+    animation: loading-spin 0.9s linear infinite;
+}
+
+@keyframes loading-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 .empty-msg,
 .error-msg {
     padding: 1rem;
-    color: var(--vscode-foreground);
-    font-size: 13px;
+    font: 14px Consolas, "Courier New", monospace;
 }
+
+.empty-msg {
+    color: var(--vscode-foreground);
+}
+
 .error-msg {
-    color: var(--vscode-errorForeground, var(--vscode-foreground));
+    color: var(--vscode-errorForeground);
     white-space: pre-wrap;
 }
 </style>

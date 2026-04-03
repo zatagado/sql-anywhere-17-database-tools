@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+// TODO check if this is needed.
+html,
+body,
+#app {
+    height: 100%;
+}
+
 body {
     @apply p-0;
 }
