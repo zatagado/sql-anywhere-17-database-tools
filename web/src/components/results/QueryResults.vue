@@ -39,25 +39,36 @@ window.addEventListener('message', (event) => {
 </script>
 
 <template>
-    <div class="w-full min-w-0 h-full min-h-0">
-        <div v-if="loading" class="loading-container" role="status">
+    <div class="query-results-root w-full min-w-0 h-full min-h-0">
+        <div v-if="loading" class="loading-container">
             <div class="loading-spinner"/>
         </div>
         <ResultsTable v-else-if="queryResult && queryResult.length > 0" :queryResult="queryResult" />
         <div v-else-if="queryError" class="error-msg">{{ queryError }}</div>
-        <div v-else class="empty-msg" role="status">No result set.</div>
+        <div v-else class="empty-msg">No result set.</div>
     </div>
 </template>
 
 <style scoped>
+/* Fill webview height so non-fixed content can grow; loading uses fixed overlay below. */
+.query-results-root {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 100%;
+}
+
 .loading-container {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
     box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: center;
     width: 100%;
     height: 100%;
-    min-height: 100%;
     padding: 1rem;
 }
 
@@ -85,7 +96,8 @@ window.addEventListener('message', (event) => {
 .empty-msg,
 .error-msg {
     padding: 1rem;
-    font: 14px Consolas, "Courier New", monospace;
+    font-family: var(--vscode-editor-font-family);
+    font-size: var(--vscode-editor-font-size);
 }
 
 .empty-msg {

@@ -91,10 +91,13 @@ function onSortColumn(sort: { column: Column; index: number }) {
 
 <style>
 td span {
-    font: 14px Consolas, "Courier New", monospace;
+    font-family: var(--vscode-editor-font-family);
+    font-size: var(--vscode-editor-font-size);
 }
 
 th span {
-    font: 700 14px Consolas, "Courier New", monospace;
+    font-family: var(--vscode-editor-font-family);
+    font-size: var(--vscode-editor-font-size);
+    font-weight: 700;
 }
 </style>
