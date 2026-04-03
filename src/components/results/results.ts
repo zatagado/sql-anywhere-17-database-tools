@@ -13,6 +13,8 @@ import {
 import { DataSource } from '../../manager/connectionManager';
 import { selectDatasource } from '../selection/datasourcePick';
 import { ResultsRest } from '../../rest/results/resultsRest';
+import { NodeOdbcError } from 'odbc';
+import { SqlManager } from '../../manager/sqlManager';
 
 export type ResultsEntry = {
     editor: TextEditor;
@@ -53,10 +55,17 @@ function getResultsWebviewHtml(panel: WebviewPanel, extensionUri: Uri): string {
 // TODO make it a map of the full path of the file to the panel.
 
 export async function selectObject(dataSource: DataSource, objectName: string): Promise<void> {
-    const sql = ResultsRest.getSelectFromObjectEditorSql(dataSource, objectName);
-    const doc = await workspace.openTextDocument({ language: 'sql', content: sql });
-    await window.showTextDocument(doc);
-    await commands.executeCommand('sql-anywhere-17-database-tools.execute', dataSource);
+    const sql = SqlManager.getSqlQueries(dataSource.getType())!
+        .results.selectFromObject.replace('$objectName', objectName);
+    await commands.executeCommand('sql-anywhere-17-database-tools.newScratchSqlFile', sql);
+    await commands.executeCommand('sql-anywhere-17-database-tools.results.execute', dataSource);
+}
+
+function formatExecutionError(error: unknown): string {
+    if (typeof error === 'object' && error !== null && 'odbcErrors' in error) {
+        return (error as NodeOdbcError).odbcErrors.map(e => `[${e.state}] ${e.message}`).join('\n');
+    }
+    return (error as Error).message;
 }
 
 export function activate(context: ExtensionContext): Disposable[] {
@@ -163,18 +172,21 @@ export function activate(context: ExtensionContext): Disposable[] {
         }, err => {
             panel.webview.postMessage({
                 type: 'onQueryError',
-                message: ResultsRest.formatExecutionError(err)
+                message: formatExecutionError(err)
             });
         });
     }
 
     async function execute(dataSource?: DataSource) {
+        if (!(dataSource instanceof DataSource)) {
+            dataSource = undefined;
+        }
         await resultsView(dataSource);
     }
 
     return [
-        commands.registerCommand('sql-anywhere-17-database-tools.execute', execute),
-        commands.registerCommand('sql-anywhere-17-database-tools.executeWithDatasource', async () => {
+        commands.registerCommand('sql-anywhere-17-database-tools.results.execute', execute),
+        commands.registerCommand('sql-anywhere-17-database-tools.results.executeWithDatasource', async () => {
             const dataSource = await selectDatasource(context);
             await execute(dataSource!);
         })
