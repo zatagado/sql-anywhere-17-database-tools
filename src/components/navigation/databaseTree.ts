@@ -1,7 +1,12 @@
 import { ConnectionManager, DataSource } from '../../manager/connectionManager';
+import { DatabaseObjectType } from '../../manager/sqlManager';
+import { openDatabaseObject } from '../preview/object';
 import { DatabaseTreeRest } from '../../rest/navigation/databaseTreeRest';
+import { selectObject } from '../results/results';
 import {
     Command,
+    commands,
+    Disposable,
     Event,
     EventEmitter,
     ExtensionContext,
@@ -10,12 +15,6 @@ import {
     TreeItemCollapsibleState,
     Uri,
 } from 'vscode';
-
-export enum DatabaseObjectType {
-    Table = 'Table',
-    View = 'View',
-    Procedure = 'Procedure',
-}
 
 export class DatabaseTree implements TreeDataProvider<DatabaseTreeItem> {
 
@@ -170,7 +169,7 @@ export class TypesItem extends DatabaseTreeItem {
     async getChildren(): Promise<ObjectItem[]> {
         switch (this.type) {
             case DatabaseObjectType.Table: {
-                const rows = await DatabaseTreeRest.getTables(this.parentNode.dataSource, 100000, 0);
+                const rows = await DatabaseTreeRest.getTables(this.parentNode.dataSource);
                 return rows.map((row => {
                     const table = row as { TableName: string };
                     return new ObjectItem(
@@ -182,14 +181,14 @@ export class TypesItem extends DatabaseTreeItem {
                         },
                         this,
                         {
-                            command: 'databaseObjectView.open',
+                            command: '_sql-anywhere-17-database-tools.preview.openVirtualDocument',
                             title: ''
                         }
                     );
                 }));
             }
             case DatabaseObjectType.View: {
-                const rows = await DatabaseTreeRest.getViews(this.parentNode.dataSource, 100000, 0);
+                const rows = await DatabaseTreeRest.getViews(this.parentNode.dataSource);
                 return rows.map((row => {
                     const view = row as { ViewName: string };
                     return new ObjectItem(
@@ -201,14 +200,14 @@ export class TypesItem extends DatabaseTreeItem {
                         },
                         this,
                         {
-                            command: 'databaseObjectView.open',
+                            command: '_sql-anywhere-17-database-tools.preview.openVirtualDocument',
                             title: ''
                         }
                     );
                 }));
             }
             case DatabaseObjectType.Procedure: {
-                const rows = await DatabaseTreeRest.getProcedures(this.parentNode.dataSource, 100000, 0);
+                const rows = await DatabaseTreeRest.getProcedures(this.parentNode.dataSource);
                 return rows.map((row => {
                     const procedure = row as { ProcedureName: string };
                     return new ObjectItem(
@@ -220,7 +219,7 @@ export class TypesItem extends DatabaseTreeItem {
                         },
                         this,
                         {
-                            command: 'databaseObjectView.open',
+                            command: '_sql-anywhere-17-database-tools.preview.openVirtualDocument',
                             title: ''
                         }
                     );
@@ -244,6 +243,12 @@ export class ObjectItem extends DatabaseTreeItem {
         super(label, collapsibleState);
         this.iconPath = iconPath;
         this.parentNode = parentNode;
+        if (parentNode.type === DatabaseObjectType.Table) {
+            this.contextValue = 'tableObjectItem';
+        }
+        else if (parentNode.type === DatabaseObjectType.View) {
+            this.contextValue = 'viewObjectItem';
+        }
         if (this.command) {
             this.command.arguments = [this];
         }
@@ -256,4 +261,13 @@ export class ObjectItem extends DatabaseTreeItem {
     public getType(): DatabaseObjectType {
         return this.parentNode.type;
     }
+}
+
+export function activate(): Disposable[] {
+    return [
+        commands.registerCommand('_sql-anywhere-17-database-tools.preview.openVirtualDocument', (node: ObjectItem) =>
+            openDatabaseObject(node.getDataSource(), node.getType(), node.label as string)),
+        commands.registerCommand('_sql-anywhere-17-database-tools.databaseTree.select',
+            (node: ObjectItem) => selectObject(node.getDataSource(), node.label as string))
+    ];
 }

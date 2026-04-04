@@ -1,15 +1,12 @@
 import {
-    ConnectionManager
+    ConnectionManager,
+    DataSource
 } from '../../manager/connectionManager';
 import {
     DatabaseObjectViewRest
 } from '../../rest/preview/databaseObjectViewRest';
+import { DatabaseObjectType } from '../../manager/sqlManager';
 import {
-    DatabaseObjectType,
-    ObjectItem
-} from '../navigation/databaseTree';
-import {
-    commands,
     Disposable,
     EventEmitter,
     TextDocumentContentProvider,
@@ -18,9 +15,36 @@ import {
     workspace
 } from 'vscode';
 
+const viewDocumentScheme = 'virtualViewSQL';
+const procedureDocumentScheme = 'virtualProcedureSQL';
+
+/** Opens a view or procedure document the same way as the database tree (tables are not previewed yet). */
+export async function openDatabaseObject(
+    dataSource: DataSource,
+    type: DatabaseObjectType,
+    objectName: string
+): Promise<void> {
+    switch (type) {
+        case DatabaseObjectType.View: {
+            const uri = Uri.parse(`${viewDocumentScheme}:${dataSource.getName()}/${objectName}.sql`);
+            const doc = await workspace.openTextDocument(uri);
+            await window.showTextDocument(doc, { preview: true });
+            return;
+        }
+        case DatabaseObjectType.Procedure: {
+            const uri = Uri.parse(`${procedureDocumentScheme}:${dataSource.getName()}/${objectName}.sql`);
+            const doc = await workspace.openTextDocument(uri);
+            await window.showTextDocument(doc, { preview: true });
+            return;
+        }
+        default:
+            return;
+    }
+}
+
 export function activate(): Disposable[] {
     class ViewProvider implements TextDocumentContentProvider {
-        static readonly scheme = 'virtualViewSQL';
+        static readonly scheme = viewDocumentScheme;
 
         _onDidChangeEmitter = new EventEmitter<Uri>();
         onDidChange = this._onDidChangeEmitter.event;
@@ -38,7 +62,7 @@ export function activate(): Disposable[] {
     }
 
     class ProcedureProvider implements TextDocumentContentProvider {
-        static readonly scheme = 'virtualProcedureSQL';
+        static readonly scheme = procedureDocumentScheme;
 
         _onDidChangeEmitter = new EventEmitter<Uri>();
         onDidChange = this._onDidChangeEmitter.event;
@@ -52,32 +76,8 @@ export function activate(): Disposable[] {
         }
     }
 
-    async function openView(node: ObjectItem) {
-        const uri = Uri.parse(`${ViewProvider.scheme}:${node.getDataSource().getName()}/${node.label}.sql`);
-        const doc = await workspace.openTextDocument(uri);
-        await window.showTextDocument(doc, { preview: true });
-    }
-
-    async function openProcedure(node: ObjectItem) {
-        const uri = Uri.parse(`${ProcedureProvider.scheme}:${node.getDataSource().getName()}/${node.label}.sql`);
-        const doc = await workspace.openTextDocument(uri);
-        await window.showTextDocument(doc, { preview: true });
-    }
-
-    async function openObjectItem(node: ObjectItem) {
-        switch (node.getType()) {
-            case DatabaseObjectType.View:
-                return openView(node);
-            case DatabaseObjectType.Procedure:
-                return openProcedure(node);
-            default:
-                return;
-        }
-    }
-        
     const subscriptions: Disposable[] = [];
     subscriptions.push(workspace.registerTextDocumentContentProvider(ViewProvider.scheme, new ViewProvider()));
     subscriptions.push(workspace.registerTextDocumentContentProvider(ProcedureProvider.scheme, new ProcedureProvider()));
-    subscriptions.push(commands.registerCommand('databaseObjectView.open', (node: ObjectItem) => openObjectItem(node)));
     return subscriptions;
 }

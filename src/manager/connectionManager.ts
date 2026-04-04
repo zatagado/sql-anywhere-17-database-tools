@@ -29,7 +29,7 @@ export class ConnectionManager {
         if (this.stack.some(otherDataSource => otherDataSource.getName() === newDataSource.getName())) {
             this.stack = this.stack.filter(otherDataSource => otherDataSource.getName() !== newDataSource.getName());
         }
-        this.stack.push(newDataSource);
+        this.stack.unshift(newDataSource);
         this.context.globalState.update('dataSources', this.stack);
     }
 
@@ -60,7 +60,7 @@ export class ConnectionManager {
         if (this.stack.some(otherDataSource => 
             otherDataSource.getName() === dataSource.getName() && otherDataSource.getType() === dataSource.getType())) {
             this.stack = this.stack.filter(otherDataSource => otherDataSource.getName() !== dataSource.getName());
-            this.stack.push(dataSource);
+            this.stack.unshift(dataSource);
         }
         else {
             throw new Error(`DataSource ${dataSource.getName()} not found in stack`);
@@ -82,13 +82,13 @@ export class ConnectionManager {
         if (updateRecent) {
             this.updateRecentStack(dataSource);
         }
+        // TODO look into the cursor
         return dataSource.getConnection().then(connection =>
             connection.query(query).catch(() =>
                 dataSource.reconnect().then(newConnection => newConnection.query(query))
             )
         );
     }
-        
 }
 
 export class DataSource {
