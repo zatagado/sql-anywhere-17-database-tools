@@ -9,10 +9,7 @@ const props = defineProps<{
         nullable: boolean,
         sort?: 'asc' | 'desc' | null,
     },
-    value: {  
-        type: [String, Number],
-        required: true
-    }
+    value: string | number | boolean,
 }>()
 
 const textClass = props.column.dataType === 4 ? 'numeric' : 'string'; // TODO add helper function for this

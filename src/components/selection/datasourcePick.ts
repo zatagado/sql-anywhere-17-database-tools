@@ -74,7 +74,7 @@ export async function selectDatasource(context: ExtensionContext): Promise<DataS
     }
     else if (await validateDatasource(dataSource)) {
         ConnectionManager.saveDataSource(dataSource);
-        window.showInformationMessage(`Connected to ${dataSource.getName()}`);
+        window.setStatusBarMessage(`Connected to ${dataSource.getName()}`, 5000);
         return dataSource;
     }
     else {

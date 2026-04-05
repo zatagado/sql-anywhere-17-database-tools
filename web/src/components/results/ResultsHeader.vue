@@ -13,8 +13,11 @@ type Column = {
 
 const props = defineProps<{
     columns: Column[],
-    tableElement: HTMLTableElement | undefined
+    innerHeight: number,
 }>();
+
+const headerHeight = defineModel<number>('headerHeight', { default: 0 });
+const columnWidths = defineModel<number[]>('columnWidths', { required: true });
 
 const emit = defineEmits<{
     sort: [{ column: Column, index: number }]
@@ -22,9 +25,6 @@ const emit = defineEmits<{
 
 const minCellWidth = 100;
 const defaultColumnWidth = 150;
-const indexColumn = '50px';
-const fillerColumn = 'minmax(0, 1fr)';
-const tableHeight = ref<number | 'auto'>('auto');
 const activeIndex = ref<number | null>(null);
 const columnProps = props.columns.map((column) => ({
     def: column,
@@ -41,25 +41,19 @@ function mouseDown(index: number) {
 }
 
 function mouseMove(event: MouseEvent) {
-    const gridColumns = columnProps.map((column, index) => {
+    columnWidths.value = columnWidths.value.map((_, index) => {
+        const column = columnProps[index]!;
         if (activeIndex.value === index) {
             const width = event.clientX - (column.ref.value?.getBoundingClientRect().left ?? 0);
             if (width >= minCellWidth) {
-                return `${width}px`;
+                return width;
             }
         }
-
-        return `${column.ref.value?.offsetWidth ?? defaultColumnWidth}px`;
+        return column.ref.value?.offsetWidth ?? defaultColumnWidth;
     });
-
-    props.tableElement!.style.gridTemplateColumns = [indexColumn, ...gridColumns, fillerColumn].join(' ');
 }
 
 function resizeColumn() {
-    if (props.tableElement) {
-        tableHeight.value = props.tableElement.offsetHeight;
-    }
-
     if (activeIndex.value !== null) {
         window.addEventListener('mousemove', mouseMove);
         window.addEventListener('mouseup', mouseUp);
@@ -71,12 +65,18 @@ function removeListeners() {
     window.removeEventListener('mouseup', mouseUp);
 }
 
-onMounted(resizeColumn);
+function measureHeader() {
+    headerHeight.value = (document.querySelector('thead')!.firstChild!.firstChild as HTMLElement)
+        .getBoundingClientRect().height;
+}
+
+onMounted(() => {
+    measureHeader();
+});
 
 onUpdated(resizeColumn);
 
-const resizeHandleStyle = computed(() => ({ height: typeof tableHeight.value === 'number' ?
-    `${tableHeight.value}px` : tableHeight.value }));
+const resizeHandleStyle = computed(() => ({ height: `${headerHeight.value}px` }));
 
 </script>
 <template>
@@ -109,8 +109,12 @@ const resizeHandleStyle = computed(() => ({ height: typeof tableHeight.value ===
 
 .results-header.index {
     border-right: 1px solid var(--vscode-editorWidget-border);
+    box-sizing: border-box;
     left: 0;
-    z-index: 3;
+    min-width: 50px;
+    padding: 8px 10px 8px 10px;
+    width: 100%;
+    z-index: 4;
 }
 
 .results-header.filler {

@@ -17,13 +17,17 @@ const emit = defineEmits<{
 
 const columnsForHeader = computed(() => props.queryResult.columns as Column[]);
 
-const tableElement = ref<HTMLTableElement>();
-
+const scrollTop = ref(0);
+const innerHeight = ref(window.innerHeight);
+const headerHeight = ref(0);
 const defaultColumnWidth = 150;
-const indexColumn = '50px';
+const indexColumn = 'minmax(50px, max-content)';
 const fillerColumn = 'minmax(0, 1fr)';
+const columnWidths = ref<number[]>(
+    Array.from({ length: props.queryResult.columns.length }, () => defaultColumnWidth)
+);
 const tableStyle = computed(() => ({
-    gridTemplateColumns: [indexColumn, ...props.queryResult.columns.map(() => `${defaultColumnWidth}px`), fillerColumn].join(' ')
+    gridTemplateColumns: [indexColumn, ...columnWidths.value.map((width) => `${width}px`), fillerColumn].join(' ')
 }));
 
 const sortState = ref<{ column: string | null; direction: SortDirection }>({
@@ -32,7 +36,6 @@ const sortState = ref<{ column: string | null; direction: SortDirection }>({
 });
 
 function onSortColumn(sort: { column: Column; index: number }) {
-
     function compare(a: unknown, b: unknown, dataType: number): number {
         if (dataType === 4) {
             return Number(a) - Number(b);
@@ -75,19 +78,44 @@ function onSortColumn(sort: { column: Column; index: number }) {
     emit('sortColumn', { column: columnAfter, index: sort.index });
 }
 
+function onScroll(e: Event) {
+    scrollTop.value = (e.currentTarget as HTMLElement).scrollTop;
+}
+
+function onResize() {
+    innerHeight.value = window.innerHeight;
+}
+window.addEventListener('resize', onResize);
 </script>
 
 <template>
     <table
-        class="grid min-w-full w-full"
+        class="grid min-w-full w-full results-table-scroll"
         @dragstart.prevent
-        ref="tableElement"
+        @scroll="onScroll"
         :style="tableStyle"
     >
-        <ResultsHeader :columns="columnsForHeader" :table-element="tableElement" @sort="onSortColumn" />
-        <ResultsBody :queryResult="queryResult" />
+        <ResultsHeader
+            v-model:header-height="headerHeight"
+            v-model:column-widths="columnWidths"
+            :columns="columnsForHeader"
+            :inner-height="innerHeight"
+            @sort="onSortColumn"
+        />
+        <ResultsBody :query-result="queryResult" :virtual-table-paramaters="{ scrollTop, innerHeight, headerHeight }" />
     </table>
 </template>
+
+<style scoped>
+/* display:grid on <table> makes it a normal scroll container; tbody scroll alone is not possible. */
+.results-table-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    /* Avoid stretching implicit grid rows to fill the scroll area when there are few rows */
+    align-content: start;
+}
+</style>
 
 <style>
 td span {

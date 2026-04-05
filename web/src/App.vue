@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import QueryResults from './components/results/QueryResults.vue'
-import Test from './components/results/Test.vue'
 
 type WebviewView = 'queryResults' | 'test'
 
