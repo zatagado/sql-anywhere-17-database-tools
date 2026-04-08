@@ -30,14 +30,15 @@ td span {
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
-.numeric {
-    text-align: right;
-}
-
-.string {
+td span.string {
     text-align: left;
+    white-space: pre;
+}
+
+td span.numeric {
+    text-align: right;
+    white-space: nowrap;
 }
 </style>
