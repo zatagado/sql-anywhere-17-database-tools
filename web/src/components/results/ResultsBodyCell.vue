@@ -9,10 +9,7 @@ const props = defineProps<{
         nullable: boolean,
         sort?: 'asc' | 'desc' | null,
     },
-    value: {  
-        type: [String, Number],
-        required: true
-    }
+    value: string | number | boolean,
 }>()
 
 const textClass = props.column.dataType === 4 ? 'numeric' : 'string'; // TODO add helper function for this
@@ -33,14 +30,15 @@ td span {
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
-.numeric {
-    text-align: right;
-}
-
-.string {
+td span.string {
     text-align: left;
+    white-space: pre;
+}
+
+td span.numeric {
+    text-align: right;
+    white-space: nowrap;
 }
 </style>

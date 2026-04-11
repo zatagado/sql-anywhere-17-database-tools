@@ -17,13 +17,17 @@ const emit = defineEmits<{
 
 const columnsForHeader = computed(() => props.queryResult.columns as Column[]);
 
-const tableElement = ref<HTMLTableElement>();
-
+const scrollTop = ref(0);
+const innerHeight = ref(window.innerHeight);
+const headerHeight = ref(0);
 const defaultColumnWidth = 150;
-const indexColumn = '50px';
+const indexColumn = 'minmax(50px, max-content)';
 const fillerColumn = 'minmax(0, 1fr)';
+const columnWidths = ref<number[]>(
+    Array.from({ length: props.queryResult.columns.length }, () => defaultColumnWidth)
+);
 const tableStyle = computed(() => ({
-    gridTemplateColumns: [indexColumn, ...props.queryResult.columns.map(() => `${defaultColumnWidth}px`), fillerColumn].join(' ')
+    gridTemplateColumns: [indexColumn, ...columnWidths.value.map((width) => `${width}px`), fillerColumn].join(' ')
 }));
 
 const sortState = ref<{ column: string | null; direction: SortDirection }>({
@@ -32,7 +36,6 @@ const sortState = ref<{ column: string | null; direction: SortDirection }>({
 });
 
 function onSortColumn(sort: { column: Column; index: number }) {
-
     function compare(a: unknown, b: unknown, dataType: number): number {
         if (dataType === 4) {
             return Number(a) - Number(b);
@@ -59,7 +62,7 @@ function onSortColumn(sort: { column: Column; index: number }) {
     const dataType = sort.column.dataType;
     const key = sort.column.name;
     const rows = props.queryResult;
-    // Shared Result<unknown> from the extension: sort rows and attach sort UI state in place.
+
     rows.sort((rowA, rowB) =>
         direction * compare(
             (rowA as Record<string, unknown>)[key],
@@ -75,19 +78,65 @@ function onSortColumn(sort: { column: Column; index: number }) {
     emit('sortColumn', { column: columnAfter, index: sort.index });
 }
 
+function onResize() {
+    innerHeight.value = window.innerHeight;
+}
+
+window.addEventListener('resize', onResize);
+
+const blocked = ref(false);
+const timeout = ref<number | null>(null);
+const currentScrollTop = ref(0);
+function onThrottledScroll(e: Event) {
+    currentScrollTop.value = (e.currentTarget as HTMLElement).scrollTop;
+    if (timeout.value) {
+        clearTimeout(timeout.value);
+    }
+    timeout.value = setTimeout(() => {
+        scrollTop.value = currentScrollTop.value;
+    }, 100);
+    if (blocked.value) {
+        return;
+    }
+    blocked.value = true;
+    setTimeout(() => (blocked.value = false), 100);
+    scrollTop.value = currentScrollTop.value;
+}
+
+
 </script>
 
 <template>
     <table
-        class="grid min-w-full w-full"
+        class="grid min-w-full w-full results-table-scroll"
         @dragstart.prevent
-        ref="tableElement"
+        @scroll="onThrottledScroll"
         :style="tableStyle"
     >
-        <ResultsHeader :columns="columnsForHeader" :table-element="tableElement" @sort="onSortColumn" />
-        <ResultsBody :queryResult="queryResult" />
+        <ResultsHeader
+            v-model:header-height="headerHeight"
+            v-model:column-widths="columnWidths"
+            :columns="columnsForHeader"
+            :inner-height="innerHeight"
+            @sort="onSortColumn"
+        />
+        <ResultsBody
+            :query-result="queryResult"
+            :virtual-table-paramaters="{ scrollTop, innerHeight, headerHeight, sortState }"
+        />
     </table>
 </template>
+
+<style scoped>
+.results-table-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    /* Overflow anchor prevents scroll top jumping vertically when scrolled horizontally. */
+    overflow-anchor: none;
+    align-content: start;
+}
+</style>
 
 <style>
 td span {

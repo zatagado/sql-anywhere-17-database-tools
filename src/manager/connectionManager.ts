@@ -109,15 +109,8 @@ export class DataSource {
         return this.pool;
     }
 
-    private async disposePool(): Promise<void> {
-        if (this.pool === undefined) {
-            return;
-        }
-        try {
-            await (await this.pool).close();
-        } catch {
-            // ignore close errors on teardown
-        }
+    private disposePool(): void {
+        this.pool?.then(pool => pool.close());
         this.pool = undefined;
     }
 
@@ -126,7 +119,7 @@ export class DataSource {
     }
 
     async reconnect(): Promise<odbc.Connection> {
-        await this.disposePool();
+        this.disposePool();
 
         for (let attempt = 0; attempt < DataSource.MAX_RECONNECT_ATTEMPTS; attempt++) {
             if (attempt > 0) {
@@ -137,7 +130,7 @@ export class DataSource {
                 const connection = await pool.connect();
                 return connection;
             } catch (err) {
-                await this.disposePool();
+                this.disposePool();
             }
         }
 

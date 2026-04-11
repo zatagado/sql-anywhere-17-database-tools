@@ -11,23 +11,22 @@ defineProps<{
         nullable: boolean,
         sort?: 'asc' | 'desc' | null,
     }[]
-    row: Array<{ [key: string]: string | number | boolean }>
+    row: Record<string, string | number | boolean>
 }>()
 
 
 </script>
 
 <template>
-    <tr class="contents" :class="{ 'results-row--alt': rowIndex % 2 === 1 }">
+    <tr class="contents" :class="{ 'alt': rowIndex % 2 === 1 }">
         <td class="index-cell">
             <span>{{ rowIndex + 1 }}</span>
         </td>
-        <!-- @vue-ignore -->
         <ResultsBodyCell
             v-for="column in columns"
             :key="column.name"
             :column="column"
-            :value="row[column.name]"
+            :value="row[column.name]!"
         />
         <td class="filler-cell"></td>
     </tr>
@@ -36,11 +35,13 @@ defineProps<{
 <style scoped>
 td.index-cell {
     border-right: 1px solid var(--vscode-editorWidget-border);
+    box-sizing: border-box;
     left: 0;
+    min-width: 50px;
     position: sticky;
     text-align: right;
     padding: 5px 10px 5px 0px;
-    z-index: 1;
+    z-index: 2;
 }
 
 td {
@@ -60,11 +61,11 @@ td.index-cell {
     background: var(--vscode-editor-background);
 }
 
-tr.results-row--alt td {
+tr.alt td {
     background: color-mix(in srgb, var(--vscode-editor-background) 90%, rgb(0 0 0) 10%);
 }
 
-body.vscode-light tr.results-row--alt td {
+body.vscode-light tr.alt td {
     background: color-mix(in srgb, var(--vscode-editor-background) 98.5%, rgb(0 0 0) 1.5%);
 }
 
