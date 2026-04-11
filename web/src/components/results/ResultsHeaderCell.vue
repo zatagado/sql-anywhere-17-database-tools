@@ -28,7 +28,7 @@ function onSortClick() {
 </script>
 
 <template>
-    <th :ref="element">
+    <th :ref="element" class="results-header-cell">
         <button type="button" @click="onSortClick">
             <span class="header-label">
                 {{ column.name }}
@@ -51,7 +51,7 @@ function onSortClick() {
 </template>
 
 <style scoped>
-th {
+th.results-header-cell {
     background: var(--vscode-editor-background);
     border-bottom: 1px solid var(--vscode-editorWidget-border);
     border-left: 1px solid var(--vscode-editorWidget-border);
@@ -61,14 +61,29 @@ th {
     z-index: 2;
 }
 
+th.results-header-cell:hover {
+    background: color-mix(in srgb, var(--vscode-editor-background) 94%, rgb(255 255 255) 6%);
+}
+
+:global(body.vscode-light) th.results-header-cell:hover {
+    background: color-mix(in srgb, var(--vscode-editor-background) 97%, rgb(255 255 255) 3%);
+}
+
+th.results-header-cell:has(button:active) {
+    box-shadow: inset 0 0 0 1px var(--vscode-focusBorder);
+}
+
 button {
     align-items: center;
+    background: transparent;
+    border: none;
     display: flex;
     gap: 4px;
     height: 100%;
     margin-left: auto;
     margin-right: auto;
     min-width: 0;
+    padding: 0;
     text-align: left;
     width: calc(100% - 10px);
 }

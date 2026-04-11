@@ -78,21 +78,39 @@ function onSortColumn(sort: { column: Column; index: number }) {
     emit('sortColumn', { column: columnAfter, index: sort.index });
 }
 
-function onScroll(e: Event) {
-    scrollTop.value = (e.currentTarget as HTMLElement).scrollTop;
-}
-
 function onResize() {
     innerHeight.value = window.innerHeight;
 }
+
 window.addEventListener('resize', onResize);
+
+const blocked = ref(false);
+const timeout = ref<number | null>(null);
+const currentScrollTop = ref(0);
+function onThrottledScroll(e: Event) {
+    currentScrollTop.value = (e.currentTarget as HTMLElement).scrollTop;
+    if (timeout.value) {
+        clearTimeout(timeout.value);
+    }
+    timeout.value = setTimeout(() => {
+        scrollTop.value = currentScrollTop.value;
+    }, 100);
+    if (blocked.value) {
+        return;
+    }
+    blocked.value = true;
+    setTimeout(() => (blocked.value = false), 100);
+    scrollTop.value = currentScrollTop.value;
+}
+
+
 </script>
 
 <template>
     <table
         class="grid min-w-full w-full results-table-scroll"
         @dragstart.prevent
-        @scroll="onScroll"
+        @scroll="onThrottledScroll"
         :style="tableStyle"
     >
         <ResultsHeader

@@ -3,7 +3,7 @@ import DummyBodyRow from './DummyBodyRow.vue';
 import ResultsBodyRow from './ResultsBodyRow.vue';
 import VirtualBodyRow from './VirtualBodyRow.vue';
 import type { Result } from 'odbc';
-import { computed, nextTick, onMounted, ref } from 'vue';
+import { nextTick, onMounted, ref, watch } from 'vue';
 const props = defineProps<{
     queryResult: Result<unknown>
     virtualTableParamaters: {
@@ -13,28 +13,33 @@ const props = defineProps<{
     }
 }>();
 
-// TODO could consolidate this to make it more efficient, this is just for ease of reading
+const paddingRows = 10;
 const rowHeight = ref(0);
 const rowHeightReady = ref(false);
-const paddingRows = 5;
 
-const scrollTop = computed(() => props.virtualTableParamaters.scrollTop);
-const scrollBottom = computed(() => props.virtualTableParamaters.scrollTop + props.virtualTableParamaters.innerHeight -
-    props.virtualTableParamaters.headerHeight);
+const virtualRows = ref<unknown[]>([]);
+const virtualTopRowHeight = ref(0);
+const virtualBottomRowHeight = ref(0);
+const startRowIndex = ref(0);
+watch(
+    [() => props.virtualTableParamaters, rowHeight],
+    () => {
+        const scrollTopPadded = props.virtualTableParamaters.scrollTop - (rowHeight.value * paddingRows);
+        const scrollTopBounded = Math.max(0, scrollTopPadded);
+        const scrollBottom = props.virtualTableParamaters.scrollTop + props.virtualTableParamaters.innerHeight
+            - props.virtualTableParamaters.headerHeight;
+        const scrollBottomPadded = scrollBottom + (rowHeight.value * paddingRows);
+        const scrollBottomBounded = Math.min(scrollBottomPadded, props.queryResult.length * rowHeight.value);
+        const startRow = Math.floor(scrollTopBounded / rowHeight.value);
+        const endRow = Math.ceil(scrollBottomBounded / rowHeight.value);
 
-const scrollTopPadded = computed(() => scrollTop.value - (rowHeight.value * paddingRows));
-const scrollBottomPadded = computed(() => scrollBottom.value + (rowHeight.value * paddingRows));
-
-const scrollTopBounded = computed(() => Math.max(0, scrollTopPadded.value));
-const scrollBottomBounded = computed(() => Math.min(scrollBottomPadded.value, props.queryResult.length * rowHeight.value));
-
-const startRowIndex = computed(() => Math.floor(scrollTopBounded.value / rowHeight.value));
-const endRowIndex = computed(() => Math.ceil(scrollBottomBounded.value / rowHeight.value));
-
-const virtualRows = computed(() => props.queryResult.slice(startRowIndex.value, endRowIndex.value));
-
-const virtualTopRowHeight = computed(() => rowHeight.value * startRowIndex.value);
-const virtualBottomRowHeight = computed(() => rowHeight.value * (props.queryResult.length - endRowIndex.value));
+        virtualRows.value = props.queryResult.slice(startRow, endRow);
+        virtualTopRowHeight.value = rowHeight.value * startRow;
+        virtualBottomRowHeight.value = rowHeight.value * (props.queryResult.length - endRow);
+        startRowIndex.value = startRow;
+    },
+    { deep: true }
+);
 
 async function measureProbeRow() {
     await nextTick();
@@ -55,10 +60,10 @@ onMounted(() => {
 <template>
     <tbody class="contents">
         <DummyBodyRow
-            v-if="!rowHeightReady && queryResult.length > 0"
+            v-if="rowHeight === 0 && queryResult.length > 0"
             :columns="queryResult.columns"
         />
-        <template v-if="rowHeightReady">
+        <template v-if="rowHeight > 0">
             <VirtualBodyRow :columns="queryResult.columns" :height="virtualTopRowHeight"/>
             <!-- @vue-ignore -->
             <ResultsBodyRow v-for="(row, index) in virtualRows"
