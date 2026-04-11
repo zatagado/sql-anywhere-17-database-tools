@@ -1,24 +1,23 @@
 # SQL Anywhere 17 Database Tools
 
-Browse tables, views, and procedures over **ODBC**, run SQL from the editor, and view results in a side panel. Connections use **DSN** names (e.g. `DSN=MyDataSource`).
+Browse tables, views, and procedures over **ODBC**, run SQL from the editor, and view results in a side panel.
 
 ## Prerequisites
 
-- VS Code **1.105+**
-- **SQL Anywhere 17 ODBC Driver**
 - **ODBC Data Sources**
+- **SQL Anywhere 17 ODBC Driver**
 
 ## Installation
 
 1. Download the `.vsix` file.
-2. In **VS Code** or **Cursor**, install it either way:
-   - Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) → **Extensions: Install from VSIX…**, then pick the file.
+2. In **VS Code** or **Cursor**, install the extension using either method:
+   - Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) → **Extensions: Install from VSIX…**, then select the `.vsix` file.
    - In the Explorer, right-click the `.vsix` file → **Install Extension VSIX**.
-3. Reload the window if prompted.
+3. Reload instances of **VS Code** or **Cursor**.
 
 ## Quick start
 
-1. Open **Database Tools** in the Activity Bar → **Add Datasource** and pick your DSN and database **type** (e.g. SQL Anywhere 17).
+1. Open **Database Tools** in the Activity Bar → **Add Datasource** and pick your DSN and database **type**. DSN is the datasource name in the ODBC Data Sources application.
 2. Expand a datasource to see **Tables**, **Views**, and **Procedures**. Click a view or procedure to preview its definition; use **Select** on a table or view for a generated query.
 3. Open a `.sql` file → run **Tasks: Execute SQL** from the editor toolbar button, or **Alt**+click that button for **Tasks: Execute SQL with Datasource**, or run either command from the Command Palette.
 
@@ -39,5 +38,5 @@ You can assign **keybindings** to these commands in **Keyboard Shortcuts**.
 
 ```bash
 yarn install
-yarn vsce package
+yarn run vsce package
 ```
