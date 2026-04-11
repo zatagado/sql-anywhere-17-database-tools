@@ -9,7 +9,8 @@ const props = defineProps<{
     virtualTableParamaters: {
         scrollTop: number,
         innerHeight: number,
-        headerHeight: number
+        headerHeight: number,
+        sortState: { column: string | null; direction: 'asc' | 'desc' | null }
     }
 }>();
 
@@ -21,23 +22,26 @@ const virtualRows = ref<unknown[]>([]);
 const virtualTopRowHeight = ref(0);
 const virtualBottomRowHeight = ref(0);
 const startRowIndex = ref(0);
+
+function updateVirtualRows() {
+    const scrollTopPadded = props.virtualTableParamaters.scrollTop - (rowHeight.value * paddingRows);
+    const scrollTopBounded = Math.max(0, scrollTopPadded);
+    const scrollBottom = props.virtualTableParamaters.scrollTop + props.virtualTableParamaters.innerHeight
+        - props.virtualTableParamaters.headerHeight;
+    const scrollBottomPadded = scrollBottom + (rowHeight.value * paddingRows);
+    const scrollBottomBounded = Math.min(scrollBottomPadded, props.queryResult.length * rowHeight.value);
+    const startRow = Math.floor(scrollTopBounded / rowHeight.value);
+    const endRow = Math.ceil(scrollBottomBounded / rowHeight.value);
+
+    virtualRows.value = props.queryResult.slice(startRow, endRow);
+    virtualTopRowHeight.value = rowHeight.value * startRow;
+    virtualBottomRowHeight.value = rowHeight.value * (props.queryResult.length - endRow);
+    startRowIndex.value = startRow;
+}
+
 watch(
     [() => props.virtualTableParamaters, rowHeight],
-    () => {
-        const scrollTopPadded = props.virtualTableParamaters.scrollTop - (rowHeight.value * paddingRows);
-        const scrollTopBounded = Math.max(0, scrollTopPadded);
-        const scrollBottom = props.virtualTableParamaters.scrollTop + props.virtualTableParamaters.innerHeight
-            - props.virtualTableParamaters.headerHeight;
-        const scrollBottomPadded = scrollBottom + (rowHeight.value * paddingRows);
-        const scrollBottomBounded = Math.min(scrollBottomPadded, props.queryResult.length * rowHeight.value);
-        const startRow = Math.floor(scrollTopBounded / rowHeight.value);
-        const endRow = Math.ceil(scrollBottomBounded / rowHeight.value);
-
-        virtualRows.value = props.queryResult.slice(startRow, endRow);
-        virtualTopRowHeight.value = rowHeight.value * startRow;
-        virtualBottomRowHeight.value = rowHeight.value * (props.queryResult.length - endRow);
-        startRowIndex.value = startRow;
-    },
+    updateVirtualRows,
     { deep: true }
 );
 

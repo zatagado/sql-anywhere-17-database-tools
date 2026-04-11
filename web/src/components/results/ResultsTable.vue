@@ -62,7 +62,7 @@ function onSortColumn(sort: { column: Column; index: number }) {
     const dataType = sort.column.dataType;
     const key = sort.column.name;
     const rows = props.queryResult;
-    // Shared Result<unknown> from the extension: sort rows and attach sort UI state in place.
+
     rows.sort((rowA, rowB) =>
         direction * compare(
             (rowA as Record<string, unknown>)[key],
@@ -120,17 +120,20 @@ function onThrottledScroll(e: Event) {
             :inner-height="innerHeight"
             @sort="onSortColumn"
         />
-        <ResultsBody :query-result="queryResult" :virtual-table-paramaters="{ scrollTop, innerHeight, headerHeight }" />
+        <ResultsBody
+            :query-result="queryResult"
+            :virtual-table-paramaters="{ scrollTop, innerHeight, headerHeight, sortState }"
+        />
     </table>
 </template>
 
 <style scoped>
-/* display:grid on <table> makes it a normal scroll container; tbody scroll alone is not possible. */
 .results-table-scroll {
     flex: 1 1 auto;
     min-height: 0;
     overflow: auto;
-    /* Avoid stretching implicit grid rows to fill the scroll area when there are few rows */
+    /* Overflow anchor prevents scroll top jumping vertically when scrolled horizontally. */
+    overflow-anchor: none;
     align-content: start;
 }
 </style>
