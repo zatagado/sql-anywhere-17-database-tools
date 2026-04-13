@@ -20,12 +20,40 @@ const columnsForHeader = computed(() => props.queryResult.columns as Column[]);
 const scrollTop = ref(0);
 const innerHeight = ref(window.innerHeight);
 const headerHeight = ref(0);
-const defaultColumnWidth = 150;
+
 const indexColumn = 'minmax(50px, max-content)';
 const fillerColumn = 'minmax(0, 1fr)';
-const columnWidths = ref<number[]>(
-    Array.from({ length: props.queryResult.columns.length }, () => defaultColumnWidth)
-);
+
+const padding = 6;
+const maxColumnWidth = 64;
+
+function calculateColumnWidths(queryResult: Result<unknown>) {
+    function getCellFont(): string {
+        const style = getComputedStyle(document.documentElement);
+        const size = style.getPropertyValue('--vscode-editor-font-size');
+        const family = style.getPropertyValue('--vscode-editor-font-family');
+        return `${size} ${family}`;
+    }
+
+    function getLongestValue(column: Column, queryResult: Result<unknown>): number {
+        return Math.max(column.name.length, ...queryResult.map((row) =>
+            String((row as Record<string, unknown>)[column.name] ?? '').length));
+    }
+
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    context!.font = getCellFont();
+
+    // All characters will be in a monospace font so just measure a single character
+    const charWidth = context?.measureText('0').width;
+    canvas.remove();
+
+    return queryResult.columns.map((column) =>
+        charWidth! * Math.min(getLongestValue(column as Column, queryResult) + padding, maxColumnWidth));
+}
+
+const columnWidths = ref<number[]>(calculateColumnWidths(props.queryResult));
+
 const tableStyle = computed(() => ({
     gridTemplateColumns: [indexColumn, ...columnWidths.value.map((width) => `${width}px`), fillerColumn].join(' ')
 }));
@@ -35,23 +63,35 @@ const sortState = ref<{ column: string | null; direction: SortDirection }>({
     direction: null
 });
 
+// TODO there is an issue where sorting with multiple of the same column will sort both, but they may have different data
 function onSortColumn(sort: { column: Column; index: number }) {
     function compare(a: unknown, b: unknown, dataType: number): number {
-        if (dataType === 4) {
-            return Number(a) - Number(b);
+        switch (dataType) {
+            case 4:
+            case 5:
+                return Number(a) - Number(b);
+            default:
+                return String(a ?? '').localeCompare(String(b ?? ''));
         }
-        return String(a ?? '').localeCompare(String(b ?? ''));
     }
 
     if (sortState.value.column === sort.column.name) {
+        let direction: SortDirection;
+        switch (sortState.value.direction) {
+            case 'asc':
+                direction = 'desc';
+                break;
+            case 'desc':
+                direction = null;
+                break;
+            default:
+                direction = 'asc';
+                break;
+        }
+
         sortState.value = {
             column: sort.column.name,
-            direction:
-                sortState.value.direction === 'asc'
-                    ? 'desc'
-                    : sortState.value.direction === 'desc'
-                      ? null
-                      : 'asc'
+            direction: direction
         };
     }
     else {
@@ -69,9 +109,9 @@ function onSortColumn(sort: { column: Column; index: number }) {
             (rowB as Record<string, unknown>)[key],
             dataType
         ));
-    for (const column of rows.columns as Column[]) {
-        column.sort = sortState.value.column !== null &&
-            column.name === sortState.value.column ? sortState.value.direction : null;
+    for (let i = 0; i < rows.columns.length; i++) {
+        const column = rows.columns[i] as Column;
+        column.sort = sort.index === i ? sortState.value.direction : null;
     }
 
     const columnAfter = rows.columns[sort.index] as Column;
@@ -87,6 +127,7 @@ window.addEventListener('resize', onResize);
 const blocked = ref(false);
 const timeout = ref<number | null>(null);
 const currentScrollTop = ref(0);
+
 function onThrottledScroll(e: Event) {
     currentScrollTop.value = (e.currentTarget as HTMLElement).scrollTop;
     if (timeout.value) {
@@ -102,8 +143,6 @@ function onThrottledScroll(e: Event) {
     setTimeout(() => (blocked.value = false), 100);
     scrollTop.value = currentScrollTop.value;
 }
-
-
 </script>
 
 <template>

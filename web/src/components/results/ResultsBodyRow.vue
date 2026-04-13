@@ -18,7 +18,7 @@ defineProps<{
 </script>
 
 <template>
-    <tr class="contents" :class="{ 'alt': rowIndex % 2 === 1 }">
+    <tr class="contents" :class="{ 'alt': rowIndex % 2 === 0 }">
         <td class="index-cell">
             <span>{{ rowIndex + 1 }}</span>
         </td>
