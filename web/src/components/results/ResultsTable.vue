@@ -20,17 +20,40 @@ const columnsForHeader = computed(() => props.queryResult.columns as Column[]);
 const scrollTop = ref(0);
 const innerHeight = ref(window.innerHeight);
 const headerHeight = ref(0);
-const defaultColumnWidth = 150;
 
-// TODO index column width should be based on number of digits to the result count
 const indexColumn = 'minmax(50px, max-content)';
 const fillerColumn = 'minmax(0, 1fr)';
 
-// TODO column widths should be based on the data types and sizes of the data
-const columnWidths = ref<number[]>(
-    Array.from({ length: props.queryResult.columns.length }, () => defaultColumnWidth)
-);
-// TODO column widths should be based on the data types and sizes of the data
+const padding = 6;
+const maxColumnWidth = 64;
+
+function calculateColumnWidths(queryResult: Result<unknown>) {
+    function getCellFont(): string {
+        const style = getComputedStyle(document.documentElement);
+        const size = style.getPropertyValue('--vscode-editor-font-size');
+        const family = style.getPropertyValue('--vscode-editor-font-family');
+        return `${size} ${family}`;
+    }
+
+    function getLongestValue(column: Column, queryResult: Result<unknown>): number {
+        return Math.max(column.name.length, ...queryResult.map((row) =>
+            String((row as Record<string, unknown>)[column.name] ?? '').length));
+    }
+
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    context!.font = getCellFont();
+
+    // All characters will be in a monospace font so just measure a single character
+    const charWidth = context?.measureText('0').width;
+    canvas.remove();
+
+    return queryResult.columns.map((column) =>
+        charWidth! * Math.min(getLongestValue(column as Column, queryResult) + padding, maxColumnWidth));
+}
+
+const columnWidths = ref<number[]>(calculateColumnWidths(props.queryResult));
+
 const tableStyle = computed(() => ({
     gridTemplateColumns: [indexColumn, ...columnWidths.value.map((width) => `${width}px`), fillerColumn].join(' ')
 }));
