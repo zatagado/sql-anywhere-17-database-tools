@@ -19,7 +19,8 @@ export function activate(context: vscode.ExtensionContext) {
 
     const databaseTreeProvider = new databaseTree.DatabaseTree(context);
     context.subscriptions.push(
-        vscode.window.registerTreeDataProvider('databaseTree', databaseTreeProvider),
+        vscode.window.registerTreeDataProvider('databaseTreeStandalone', databaseTreeProvider),
+        vscode.window.registerTreeDataProvider('databaseTreeExplorer', databaseTreeProvider),
         vscode.commands.registerCommand('sql-anywhere-17-database-tools.datasource.addDatasource',
             () => datasourcePick.selectDatasource(context).then(dataSource => {
                 if (dataSource) {

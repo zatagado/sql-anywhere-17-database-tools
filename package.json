@@ -105,22 +105,22 @@
             "view/title": [
                 {
                     "command": "sql-anywhere-17-database-tools.datasource.addDatasource",
-                    "when": "view == databaseTree"
+                    "when": "view == databaseTreeStandalone || view == databaseTreeExplorer"
                 },
                 {
                     "command": "_sql-anywhere-17-database-tools.databaseTree.refresh",
-                    "when": "view == databaseTree",
+                    "when": "view == databaseTreeStandalone || view == databaseTreeExplorer",
                     "group": "navigation"
                 }
             ],
             "view/item/context": [
                 {
                     "command": "_sql-anywhere-17-database-tools.databaseTree.removeDatasource",
-                    "when": "view == databaseTree && viewItem == databaseItem"
+                    "when": "(view == databaseTreeStandalone || view == databaseTreeExplorer) && viewItem == databaseItem"
                 },
                 {
                     "command": "_sql-anywhere-17-database-tools.databaseTree.select",
-                    "when": "view == databaseTree && (viewItem == tableObjectItem || viewItem == viewObjectItem)",
+                    "when": "(view == databaseTreeStandalone || view == databaseTreeExplorer) && (viewItem == tableObjectItem || viewItem == viewObjectItem)",
                     "group": "navigation"
                 }
             ]
@@ -128,10 +128,16 @@
         "views": {
             "database-tools": [
                 {
-                    "id": "databaseTree",
+                    "id": "databaseTreeStandalone",
                     "name": "Datasources",
                     "icon": "media/dep.svg",
                     "contextualTitle": "Datasources"
+                }
+            ],
+            "explorer": [
+                {
+                    "id": "databaseTreeExplorer",
+                    "name": "Datasources"
                 }
             ]
         },

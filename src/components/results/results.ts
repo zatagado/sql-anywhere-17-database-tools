@@ -78,6 +78,10 @@ export function activate(context: ExtensionContext): Disposable[] {
         }
 
         const document = editor.document;
+        if (document.languageId !== 'sql') {
+            return;
+        }
+
         const file = Uri.file(document.fileName);
         const shortName = file.path.split('/').pop()!;
         // TODO get the short name. if it already exists, change both panel titles to the workspace relative path.
@@ -187,8 +191,10 @@ export function activate(context: ExtensionContext): Disposable[] {
     return [
         commands.registerCommand('sql-anywhere-17-database-tools.results.execute', execute),
         commands.registerCommand('sql-anywhere-17-database-tools.results.executeWithDatasource', async () => {
-            const dataSource = await selectDatasource(context);
-            await execute(dataSource!);
+            if (window.activeTextEditor?.document.languageId === 'sql') {
+                const dataSource = await selectDatasource(context);
+                await execute(dataSource!);
+            }
         })
     ];
 }

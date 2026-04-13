@@ -43,7 +43,7 @@ window.addEventListener('message', (event) => {
         <div v-if="loading" class="loading-container">
             <div class="loading-spinner"/>
         </div>
-        <ResultsTable v-else-if="queryResult && queryResult.length > 0" :queryResult="queryResult" />
+        <ResultsTable v-else-if="queryResult && queryResult.columns.length > 0" :queryResult="queryResult" />
         <div v-else-if="queryError" class="error-msg">{{ queryError }}</div>
         <div v-else class="empty-msg">No result set.</div>
     </div>
@@ -93,8 +93,7 @@ window.addEventListener('message', (event) => {
     }
 }
 
-.empty-msg,
-.error-msg {
+.empty-msg, .error-msg {
     padding: 1rem;
     font-family: var(--vscode-editor-font-family);
     font-size: var(--vscode-editor-font-size);

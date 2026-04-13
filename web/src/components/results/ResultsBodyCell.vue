@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue';
 const props = defineProps<{
     column: {
         name: string,
@@ -12,12 +13,28 @@ const props = defineProps<{
     value: string | number | boolean,
 }>()
 
-const textClass = props.column.dataType === 4 ? 'numeric' : 'string'; // TODO add helper function for this
+function getTextClass(dataType: number) {
+    switch (dataType) {
+        case 4:
+        case 5:
+            return 'numeric';
+        default:
+            return 'string';
+    }
+}
+const textClass = getTextClass(props.column.dataType);
+const nullClass = ref('');
+const formattedValue = ref<string | number | boolean>('');
+
+watch(() => props.value, () => {
+    nullClass.value = props.value === null ? 'italic' : '';
+    formattedValue.value = props.value ? props.value : '(NULL)';
+}, { immediate: true });
 </script>
 
 <template>
     <td>
-        <span :class="textClass">{{ value }}</span>
+        <span :class="[textClass, nullClass]">{{ formattedValue }}</span>
     </td>
 </template>
 
@@ -40,5 +57,9 @@ td span.string {
 td span.numeric {
     text-align: right;
     white-space: nowrap;
+}
+
+td span.italic {
+    font-style: italic;
 }
 </style>
