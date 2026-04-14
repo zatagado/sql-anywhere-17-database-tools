@@ -3,7 +3,7 @@
     "publisher": "sql-anywhere-17-database-tools",
     "displayName": "SQL Anywhere 17 Database Tools",
     "description": "",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "engines": {
         "vscode": "^1.105.0"
     },
@@ -64,13 +64,31 @@
             },
             {
                 "command": "sql-anywhere-17-database-tools.search",
-                "title": "Search: Database"
+                "title": "Search: Datasource",
+                "shortTitle": "Search Datasource"
             },
             {
                 "command": "sql-anywhere-17-database-tools.newScratchSqlFile",
                 "title": "File: New Scratch SQL File..."
             }
         ],
+        "configuration": {
+            "type": "object",
+            "title": "SQL Anywhere 17 Database Tools",
+            "properties": {
+                "sql-anywhere-17-database-tools.connection.usePooling": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Use connection pooling for the database. Disabling this is recommended for databases with short connection timeouts."
+                },
+                "sql-anywhere-17-database-tools.results.fetchSize": {
+                    "type": "number",
+                    "default": 500,
+                    "minimum": 1,
+                    "description": "Number of rows to fetch when executing a query."
+                }
+            }
+        },
         "menus": {
             "commandPalette": [
                 {
@@ -105,6 +123,10 @@
             "view/title": [
                 {
                     "command": "sql-anywhere-17-database-tools.datasource.addDatasource",
+                    "when": "view == databaseTreeStandalone || view == databaseTreeExplorer"
+                },
+                {
+                    "command": "sql-anywhere-17-database-tools.search",
                     "when": "view == databaseTreeStandalone || view == databaseTreeExplorer"
                 },
                 {

@@ -1,5 +1,7 @@
 import * as odbc from 'odbc';
-import { ExtensionContext } from 'vscode';
+import { ExtensionContext, ProgressLocation, window, workspace } from 'vscode';
+
+const LOADING_RESPONSE_TIMEOUT_MS = 5000;
 
 export class ConnectionManager {
 
@@ -13,6 +15,10 @@ export class ConnectionManager {
         this.stack = (this.context.globalState.get('dataSources') as { name: string, type: string }[] ?? []).map(
             dataSource => new DataSource(dataSource.name, dataSource.type));
         return this.stack;
+    }
+
+    static reload(): void {
+        this.stack.forEach(dataSource => dataSource.disconnect());
     }
 
     static saveDataSource(dataSource: DataSource | string): void {
@@ -82,12 +88,54 @@ export class ConnectionManager {
         if (updateRecent) {
             this.updateRecentStack(dataSource);
         }
-        // TODO look into the cursor
-        return dataSource.getConnection().then(connection =>
+
+        const fetchSize = workspace.getConfiguration('sql-anywhere-17-database-tools.results').get<number>('fetchSize');
+
+        const result = dataSource.getConnection().then(connection =>
+            connection.query(query, { cursor: true, fetchSize }).catch(() =>
+                dataSource.reconnect().then(newConnection => newConnection.query(query, { cursor: true, fetchSize }))
+            ).then(cursor => cursor.fetch())
+        );
+
+        Promise.race([result, new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Loading')), LOADING_RESPONSE_TIMEOUT_MS))])
+            .catch(err => {
+                if (err instanceof Error && err.message === 'Loading') {
+                    window.withProgress({
+                        location: ProgressLocation.Notification,
+                        title: `${dataSource.getName()} is taking longer than expected to get results...`,
+                    }, () => result);
+                }
+                throw err;
+            });
+
+        return result;
+    }
+
+    static executeAll(dataSource: DataSource, query: string, updateRecent: boolean = true): Promise<odbc.Result<unknown>> {
+        if (updateRecent) {
+            this.updateRecentStack(dataSource);
+        }
+
+        const result = dataSource.getConnection().then(connection =>
             connection.query(query).catch(() =>
                 dataSource.reconnect().then(newConnection => newConnection.query(query))
             )
         );
+
+        Promise.race([result, new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Loading')), LOADING_RESPONSE_TIMEOUT_MS))])
+            .catch(err => {
+                if (err instanceof Error && err.message === 'Loading') {
+                    window.withProgress({
+                        location: ProgressLocation.Notification,
+                        title: `${dataSource.getName()} is taking longer than expected to get results...`,
+                    }, () => result);
+                }
+                throw err;
+            });
+
+        return result;
     }
 }
 
@@ -114,23 +162,29 @@ export class DataSource {
         this.pool = undefined;
     }
 
+    private static getUsePooling(): boolean {
+        return workspace.getConfiguration('sql-anywhere-17-database-tools.connection').get<boolean>('usePooling')!;
+    }
+
     isConnected(): boolean {
-        return this.pool !== undefined;
+        return !DataSource.getUsePooling() || this.pool !== undefined;
     }
 
     async reconnect(): Promise<odbc.Connection> {
-        this.disposePool();
+        if (DataSource.getUsePooling()) {
+            this.disposePool();
+        }
 
         for (let attempt = 0; attempt < DataSource.MAX_RECONNECT_ATTEMPTS; attempt++) {
             if (attempt > 0) {
                 await new Promise(resolve => setTimeout(resolve, DataSource.RECONNECT_DELAY_MS));
             }
             try {
-                const pool = await this.getPool();
-                const connection = await pool.connect();
-                return connection;
+                return DataSource.getUsePooling() ? this.getPool().then(pool => pool.connect()) : this.getDirectConnection();
             } catch (err) {
-                this.disposePool();
+                if (DataSource.getUsePooling()) {
+                    this.disposePool();
+                }
             }
         }
 
@@ -138,8 +192,18 @@ export class DataSource {
             after ${DataSource.MAX_RECONNECT_ATTEMPTS} attempts`);
     }
 
+    disconnect(): Promise<void> | undefined {
+        const pool = this.pool;
+        this.pool = undefined;
+        return pool?.then(pool => pool.close());
+    }
+
+    private getDirectConnection(): Promise<odbc.Connection> {
+        return odbc.connect(`DSN=${this.name}`);
+    }
+
     getConnection(): Promise<odbc.Connection> {
-        return this.getPool().then(pool => pool.connect());
+        return DataSource.getUsePooling() ? this.getPool().then(pool => pool.connect()) : this.getDirectConnection();
     }
 
     getName() {
@@ -187,7 +251,7 @@ export class PreparedStatement {
             (a, b) => a.position - b.position).map(parameterData => parameterData.value)).then(
                 () => this.statement.execute().then(
                     result => {
-                        this.statement.close(); // TODO not sure if closing is necessary, or at the end and add explicit close method to prepared statement class
+                        this.statement.close();
                         return result;
                     },
                     err => {

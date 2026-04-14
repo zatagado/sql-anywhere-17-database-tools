@@ -103,14 +103,7 @@ export async function pickSearchObject(_context: ExtensionContext): Promise<Sear
 
     async function selectObject(input: SearchQuickPick, state: State) {
         const dataSource = state.dataSource!;
-        const objectItems = await window.withProgress(
-            {
-                location: ProgressLocation.Notification,
-                title: `Loading objects (${dataSource.getName()})…`,
-                cancellable: true
-            },
-            () => loadObjectItems(dataSource)
-        );
+        const objectItems = await loadObjectItems(dataSource);
 
         if (objectItems.length === 0) {
             window.showWarningMessage('No tables, views, or procedures were returned for this datasource.');

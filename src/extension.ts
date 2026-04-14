@@ -13,10 +13,6 @@ export function activate(context: vscode.ExtensionContext) {
     sqlManager.SqlManager.load(context);
     connectionManager.ConnectionManager.load(context);
 
-    // resultsRest.ResultsRest.executeTest(connectionManager.ConnectionManager.getDataSources()[0]).then(schema => {
-    //     debugger;
-    // });
-
     const databaseTreeProvider = new databaseTree.DatabaseTree(context);
     context.subscriptions.push(
         vscode.window.registerTreeDataProvider('databaseTreeStandalone', databaseTreeProvider),
@@ -36,7 +32,12 @@ export function activate(context: vscode.ExtensionContext) {
         ...databaseTree.activate(),
         ...results.activate(context),
         ...scratch.activate(context),
-        ...searchPick.activate(context)
+        ...searchPick.activate(context),
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('sql-anywhere-17-database-tools.connection.usePooling')) {
+                connectionManager.ConnectionManager.reload();
+            }
+        })
     );
 }
 

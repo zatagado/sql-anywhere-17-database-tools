@@ -31,8 +31,11 @@ You can assign **keybindings** to these commands in **Keyboard Shortcuts**.
 | Remove Datasource | Remove a saved datasource from the extension. |
 | Tasks: Execute SQL | Run the active **SQL** editor’s selection (if any) or full document; show results in the webview. |
 | Tasks: Execute SQL with Datasource | Pick a datasource, then run SQL like **Execute SQL** (active editor must be **SQL**). |
-| Search: Database | Search tables, views, and procedures by name and open the chosen object. |
+| Search: Datasource | Search tables, views, and procedures by name and open the chosen object. |
 | File: New Scratch SQL File... | Open a new unsaved SQL document for scratch work. |
+
+## Settings
+Extension settings can be found under **Settings** → **Extensions** → **SQL Anywhere 17 Database Tools**.
 
 ## Building
 
