@@ -1,5 +1,7 @@
 import * as odbc from 'odbc';
-import { ExtensionContext, workspace } from 'vscode';
+import { ExtensionContext, ProgressLocation, window, workspace } from 'vscode';
+
+const LOADING_RESPONSE_TIMEOUT_MS = 5000;
 
 export class ConnectionManager {
 
@@ -89,11 +91,25 @@ export class ConnectionManager {
 
         const fetchSize = workspace.getConfiguration('sql-anywhere-17-database-tools.results').get<number>('fetchSize');
 
-        return dataSource.getConnection().then(connection =>
+        const result = dataSource.getConnection().then(connection =>
             connection.query(query, { cursor: true, fetchSize }).catch(() =>
                 dataSource.reconnect().then(newConnection => newConnection.query(query, { cursor: true, fetchSize }))
             ).then(cursor => cursor.fetch())
         );
+
+        Promise.race([result, new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Loading')), LOADING_RESPONSE_TIMEOUT_MS))])
+            .catch(err => {
+                if (err instanceof Error && err.message === 'Loading') {
+                    window.withProgress({
+                        location: ProgressLocation.Notification,
+                        title: `${dataSource.getName()} is taking longer than expected to get results...`,
+                    }, () => result);
+                }
+                throw err;
+            });
+
+        return result;
     }
 
     static executeAll(dataSource: DataSource, query: string, updateRecent: boolean = true): Promise<odbc.Result<unknown>> {
@@ -101,11 +117,25 @@ export class ConnectionManager {
             this.updateRecentStack(dataSource);
         }
 
-        return dataSource.getConnection().then(connection =>
+        const result = dataSource.getConnection().then(connection =>
             connection.query(query).catch(() =>
                 dataSource.reconnect().then(newConnection => newConnection.query(query))
             )
         );
+
+        Promise.race([result, new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Loading')), LOADING_RESPONSE_TIMEOUT_MS))])
+            .catch(err => {
+                if (err instanceof Error && err.message === 'Loading') {
+                    window.withProgress({
+                        location: ProgressLocation.Notification,
+                        title: `${dataSource.getName()} is taking longer than expected to get results...`,
+                    }, () => result);
+                }
+                throw err;
+            });
+
+        return result;
     }
 }
 

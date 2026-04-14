@@ -23,8 +23,6 @@ export class DatabaseTree implements TreeDataProvider<DatabaseTreeItem> {
     private _onDidChangeTreeData: EventEmitter<DatabaseTreeItem | undefined | void> = new EventEmitter<DatabaseTreeItem | undefined | void>();
     readonly onDidChangeTreeData: Event<DatabaseTreeItem | undefined | void> = this._onDidChangeTreeData.event;
 
-    // TODO event that opens a virtual document, 
-
     private databaseNodes: DatabaseItem[] = [];
 
     constructor(
