@@ -89,12 +89,10 @@ export class ConnectionManager {
             this.updateRecentStack(dataSource);
         }
 
-        const fetchSize = workspace.getConfiguration('sql-anywhere-17-database-tools.results').get<number>('fetchSize');
-
         const result = dataSource.getConnection().then(connection =>
-            connection.query(query, { cursor: true, fetchSize }).catch(() =>
-                dataSource.reconnect().then(newConnection => newConnection.query(query, { cursor: true, fetchSize }))
-            ).then(cursor => cursor.fetch())
+            connection.query(query).catch(() =>
+                dataSource.reconnect().then(newConnection => newConnection.query(query))
+            )
         );
 
         Promise.race([result, new Promise((_, reject) =>
