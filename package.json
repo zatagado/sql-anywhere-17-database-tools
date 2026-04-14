@@ -64,13 +64,25 @@
             },
             {
                 "command": "sql-anywhere-17-database-tools.search",
-                "title": "Search: Database"
+                "title": "Search: Datasource",
+                "shortTitle": "Search Datasource"
             },
             {
                 "command": "sql-anywhere-17-database-tools.newScratchSqlFile",
                 "title": "File: New Scratch SQL File..."
             }
         ],
+        "configuration": {
+            "type": "object",
+            "title": "SQL Anywhere 17 Database Tools",
+            "properties": {
+                "sql-anywhere-17-database-tools.connection.usePooling": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Use connection pooling for the database. Disabling this is recommended for databases with short connection timeouts."
+                }
+            }
+        },
         "menus": {
             "commandPalette": [
                 {
@@ -105,6 +117,10 @@
             "view/title": [
                 {
                     "command": "sql-anywhere-17-database-tools.datasource.addDatasource",
+                    "when": "view == databaseTreeStandalone || view == databaseTreeExplorer"
+                },
+                {
+                    "command": "sql-anywhere-17-database-tools.search",
                     "when": "view == databaseTreeStandalone || view == databaseTreeExplorer"
                 },
                 {

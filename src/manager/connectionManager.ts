@@ -1,5 +1,5 @@
 import * as odbc from 'odbc';
-import { ExtensionContext } from 'vscode';
+import { ExtensionContext, workspace } from 'vscode';
 
 export class ConnectionManager {
 
@@ -13,6 +13,12 @@ export class ConnectionManager {
         this.stack = (this.context.globalState.get('dataSources') as { name: string, type: string }[] ?? []).map(
             dataSource => new DataSource(dataSource.name, dataSource.type));
         return this.stack;
+    }
+
+    static reload(): void {
+        DataSource.usePooling = workspace.getConfiguration('sql-anywhere-17-database-tools.connection')
+            .get('usePooling') as boolean;
+        this.stack.forEach(dataSource => dataSource.disconnect());
     }
 
     static saveDataSource(dataSource: DataSource | string): void {
@@ -92,6 +98,8 @@ export class ConnectionManager {
 }
 
 export class DataSource {
+    public static usePooling = workspace.getConfiguration('sql-anywhere-17-database-tools.connection')
+        .get('usePooling') as boolean;
     private static readonly MAX_RECONNECT_ATTEMPTS = 3;
     private static readonly RECONNECT_DELAY_MS = 1000;
 
@@ -115,22 +123,24 @@ export class DataSource {
     }
 
     isConnected(): boolean {
-        return this.pool !== undefined;
+        return !DataSource.usePooling || this.pool !== undefined;
     }
 
     async reconnect(): Promise<odbc.Connection> {
-        this.disposePool();
+        if (DataSource.usePooling) {
+            this.disposePool();
+        }
 
         for (let attempt = 0; attempt < DataSource.MAX_RECONNECT_ATTEMPTS; attempt++) {
             if (attempt > 0) {
                 await new Promise(resolve => setTimeout(resolve, DataSource.RECONNECT_DELAY_MS));
             }
             try {
-                const pool = await this.getPool();
-                const connection = await pool.connect();
-                return connection;
+                return DataSource.usePooling ? this.getPool().then(pool => pool.connect()) : this.getDirectConnection();
             } catch (err) {
-                this.disposePool();
+                if (DataSource.usePooling) {
+                    this.disposePool();
+                }
             }
         }
 
@@ -138,8 +148,18 @@ export class DataSource {
             after ${DataSource.MAX_RECONNECT_ATTEMPTS} attempts`);
     }
 
+    disconnect(): Promise<void> | undefined {
+        const pool = this.pool;
+        this.pool = undefined;
+        return pool?.then(pool => pool.close());
+    }
+
+    private getDirectConnection(): Promise<odbc.Connection> {
+        return odbc.connect(`DSN=${this.name}`);
+    }
+
     getConnection(): Promise<odbc.Connection> {
-        return this.getPool().then(pool => pool.connect());
+        return DataSource.usePooling ? this.getPool().then(pool => pool.connect()) : this.getDirectConnection();
     }
 
     getName() {
@@ -187,7 +207,7 @@ export class PreparedStatement {
             (a, b) => a.position - b.position).map(parameterData => parameterData.value)).then(
                 () => this.statement.execute().then(
                     result => {
-                        this.statement.close(); // TODO not sure if closing is necessary, or at the end and add explicit close method to prepared statement class
+                        this.statement.close();
                         return result;
                     },
                     err => {
