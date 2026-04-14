@@ -16,8 +16,6 @@ export class ConnectionManager {
     }
 
     static reload(): void {
-        DataSource.usePooling = workspace.getConfiguration('sql-anywhere-17-database-tools.connection')
-            .get('usePooling') as boolean;
         this.stack.forEach(dataSource => dataSource.disconnect());
     }
 
@@ -88,7 +86,21 @@ export class ConnectionManager {
         if (updateRecent) {
             this.updateRecentStack(dataSource);
         }
-        // TODO look into the cursor
+
+        const fetchSize = workspace.getConfiguration('sql-anywhere-17-database-tools.results').get<number>('fetchSize');
+
+        return dataSource.getConnection().then(connection =>
+            connection.query(query, { cursor: true, fetchSize }).catch(() =>
+                dataSource.reconnect().then(newConnection => newConnection.query(query, { cursor: true, fetchSize }))
+            ).then(cursor => cursor.fetch())
+        );
+    }
+
+    static executeAll(dataSource: DataSource, query: string, updateRecent: boolean = true): Promise<odbc.Result<unknown>> {
+        if (updateRecent) {
+            this.updateRecentStack(dataSource);
+        }
+
         return dataSource.getConnection().then(connection =>
             connection.query(query).catch(() =>
                 dataSource.reconnect().then(newConnection => newConnection.query(query))
@@ -98,8 +110,6 @@ export class ConnectionManager {
 }
 
 export class DataSource {
-    public static usePooling = workspace.getConfiguration('sql-anywhere-17-database-tools.connection')
-        .get('usePooling') as boolean;
     private static readonly MAX_RECONNECT_ATTEMPTS = 3;
     private static readonly RECONNECT_DELAY_MS = 1000;
 
@@ -122,12 +132,16 @@ export class DataSource {
         this.pool = undefined;
     }
 
+    private static getUsePooling(): boolean {
+        return workspace.getConfiguration('sql-anywhere-17-database-tools.connection').get<boolean>('usePooling')!;
+    }
+
     isConnected(): boolean {
-        return !DataSource.usePooling || this.pool !== undefined;
+        return !DataSource.getUsePooling() || this.pool !== undefined;
     }
 
     async reconnect(): Promise<odbc.Connection> {
-        if (DataSource.usePooling) {
+        if (DataSource.getUsePooling()) {
             this.disposePool();
         }
 
@@ -136,9 +150,9 @@ export class DataSource {
                 await new Promise(resolve => setTimeout(resolve, DataSource.RECONNECT_DELAY_MS));
             }
             try {
-                return DataSource.usePooling ? this.getPool().then(pool => pool.connect()) : this.getDirectConnection();
+                return DataSource.getUsePooling() ? this.getPool().then(pool => pool.connect()) : this.getDirectConnection();
             } catch (err) {
-                if (DataSource.usePooling) {
+                if (DataSource.getUsePooling()) {
                     this.disposePool();
                 }
             }
@@ -159,7 +173,7 @@ export class DataSource {
     }
 
     getConnection(): Promise<odbc.Connection> {
-        return DataSource.usePooling ? this.getPool().then(pool => pool.connect()) : this.getDirectConnection();
+        return DataSource.getUsePooling() ? this.getPool().then(pool => pool.connect()) : this.getDirectConnection();
     }
 
     getName() {

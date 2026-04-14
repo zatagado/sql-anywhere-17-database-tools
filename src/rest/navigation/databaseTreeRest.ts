@@ -5,16 +5,16 @@ import { SqlManager } from '../../manager/sqlManager';
 export class DatabaseTreeRest {
     static async getTables(dataSource: DataSource): Promise<Result<unknown>> {
         const tableQuery = SqlManager.getSqlQueries(dataSource.getType())!.navigation.databaseTree.tables;
-        return ConnectionManager.execute(dataSource, tableQuery, false);
+        return ConnectionManager.executeAll(dataSource, tableQuery, false);
     }
 
     static async getViews(dataSource: DataSource): Promise<Result<unknown>> {
         const viewQuery = SqlManager.getSqlQueries(dataSource.getType())!.navigation.databaseTree.views;
-        return ConnectionManager.execute(dataSource, viewQuery, false);
+        return ConnectionManager.executeAll(dataSource, viewQuery, false);
     }
 
     static async getProcedures(dataSource: DataSource): Promise<Result<unknown>> {
         const procQuery = SqlManager.getSqlQueries(dataSource.getType())!.navigation.databaseTree.procedures;
-        return ConnectionManager.execute(dataSource, procQuery, false);
+        return ConnectionManager.executeAll(dataSource, procQuery, false);
     }
 }

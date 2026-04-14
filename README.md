@@ -34,6 +34,9 @@ You can assign **keybindings** to these commands in **Keyboard Shortcuts**.
 | Search: Datasource | Search tables, views, and procedures by name and open the chosen object. |
 | File: New Scratch SQL File... | Open a new unsaved SQL document for scratch work. |
 
+## Settings
+Extension settings can be found under **Settings** → **Extensions** → **SQL Anywhere 17 Database Tools**.
+
 ## Building
 
 ```bash

@@ -80,6 +80,12 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Use connection pooling for the database. Disabling this is recommended for databases with short connection timeouts."
+                },
+                "sql-anywhere-17-database-tools.results.fetchSize": {
+                    "type": "number",
+                    "default": 500,
+                    "minimum": 1,
+                    "description": "Number of rows to fetch when executing a query."
                 }
             }
         },
