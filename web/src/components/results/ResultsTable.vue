@@ -21,23 +21,43 @@ const scrollTop = ref(0);
 const innerHeight = ref(window.innerHeight);
 const headerHeight = ref(0);
 
-const indexColumn = 'minmax(50px, max-content)';
 const fillerColumn = 'minmax(0, 1fr)';
 
 const padding = 6;
 const maxColumnWidth = 64;
+const indexPadding = 20;
+
+function getCellFont(): string {
+    const style = getComputedStyle(document.documentElement);
+    const size = style.getPropertyValue('--vscode-editor-font-size');
+    const family = style.getPropertyValue('--vscode-editor-font-family');
+    return `${size} ${family}`;
+}
+
+function calculateIndexColumnWidth(queryResult: Result<unknown>): number {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d')!;
+    context.font = getCellFont();
+    const charWidth = context.measureText('0').width;
+    canvas.remove();
+
+    const count = queryResult.length;
+    const digits = count <= 0 ? 1 : String(count).length;
+    return charWidth * digits + indexPadding;
+}
+
+const indexColumnWidth = ref(calculateIndexColumnWidth(props.queryResult));
 
 function calculateColumnWidths(queryResult: Result<unknown>) {
-    function getCellFont(): string {
-        const style = getComputedStyle(document.documentElement);
-        const size = style.getPropertyValue('--vscode-editor-font-size');
-        const family = style.getPropertyValue('--vscode-editor-font-family');
-        return `${size} ${family}`;
-    }
-
     function getLongestValue(column: Column, queryResult: Result<unknown>): number {
-        return Math.max(column.name.length, ...queryResult.map((row) =>
-            String((row as Record<string, unknown>)[column.name] ?? '').length));
+        let max = column.name.length;
+        for (const row of queryResult) {
+            const length = String((row as Record<string, unknown>)[column.name] ?? '').length;
+            if (length > max) {
+                max = length;
+            }
+        }
+        return max;
     }
 
     const canvas = document.createElement('canvas');
@@ -55,7 +75,7 @@ function calculateColumnWidths(queryResult: Result<unknown>) {
 const columnWidths = ref<number[]>(calculateColumnWidths(props.queryResult));
 
 const tableStyle = computed(() => ({
-    gridTemplateColumns: [indexColumn, ...columnWidths.value.map((width) => `${width}px`), fillerColumn].join(' ')
+    gridTemplateColumns: [`${indexColumnWidth.value}px`, ...columnWidths.value.map((width) => `${width}px`), fillerColumn].join(' ')
 }));
 
 const sortState = ref<{ column: string | null; direction: SortDirection }>({

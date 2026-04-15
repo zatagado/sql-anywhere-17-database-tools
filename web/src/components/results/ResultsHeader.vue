@@ -111,7 +111,6 @@ const resizeHandleStyle = computed(() => ({ height: `${headerHeight.value}px` })
     border-right: 1px solid var(--vscode-editorWidget-border);
     box-sizing: border-box;
     left: 0;
-    min-width: 50px;
     padding: 8px 10px 8px 10px;
     width: 100%;
     z-index: 4;

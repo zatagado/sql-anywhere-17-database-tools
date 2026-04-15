@@ -10,7 +10,7 @@ export class ConnectionManager {
     private static context: ExtensionContext;
     private static stack: DataSource[] = [];
 
-    static load(context: ExtensionContext): DataSource[] {
+    static activate(context: ExtensionContext): DataSource[] {
         this.context = context;
         this.stack = (this.context.globalState.get('dataSources') as { name: string, type: string }[] ?? []).map(
             dataSource => new DataSource(dataSource.name, dataSource.type));

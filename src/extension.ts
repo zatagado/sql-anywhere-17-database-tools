@@ -9,9 +9,8 @@ import * as sqlManager from './manager/sqlManager';
 import * as vscode from 'vscode';
 
 export function activate(context: vscode.ExtensionContext) {
-    // TODO rename these to activate
-    sqlManager.SqlManager.load(context);
-    connectionManager.ConnectionManager.load(context);
+    sqlManager.SqlManager.activate(context);
+    connectionManager.ConnectionManager.activate(context);
 
     const databaseTreeProvider = new databaseTree.DatabaseTree(context);
     context.subscriptions.push(

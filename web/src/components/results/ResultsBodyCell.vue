@@ -10,7 +10,7 @@ const props = defineProps<{
         nullable: boolean,
         sort?: 'asc' | 'desc' | null,
     },
-    value: string | number | boolean,
+    value: string | number | boolean | null,
 }>()
 
 function getTextClass(dataType: number) {
@@ -27,8 +27,8 @@ const nullClass = ref('');
 const formattedValue = ref<string | number | boolean>('');
 
 watch(() => props.value, () => {
-    nullClass.value = props.value === null ? 'italic' : '';
-    formattedValue.value = props.value ? props.value : '(NULL)';
+    nullClass.value = props.value == null ? 'italic' : '';
+    formattedValue.value = props.value == null ? '(NULL)' : props.value;
 }, { immediate: true });
 </script>
 

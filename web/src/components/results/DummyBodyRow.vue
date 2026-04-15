@@ -38,7 +38,6 @@ defineProps<{
 .dummy-body-row td.index-cell {
     border-right: 1px solid var(--vscode-editorWidget-border);
     left: 0;
-    min-width: 50px;
     position: sticky;
     text-align: right;
     padding: 5px 10px 5px 0;

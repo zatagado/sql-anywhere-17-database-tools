@@ -41,7 +41,7 @@ export class SqlManager {
     private static context: ExtensionContext;
     private static sqlFiles: Map<string, Sql> = new Map();
 
-    static async load(context: ExtensionContext) {
+    static async activate(context: ExtensionContext) {
         this.context = context;
         const sqlFolderUri = Uri.joinPath(this.context.extensionUri, 'src', 'sql');
         const sqlFileUris = await workspace.fs.readDirectory(sqlFolderUri).then(files => 

@@ -11,7 +11,7 @@ defineProps<{
         nullable: boolean,
         sort?: 'asc' | 'desc' | null,
     }[]
-    row: Record<string, string | number | boolean>
+    row: Record<string, string | number | boolean | null>
 }>()
 
 
@@ -37,7 +37,6 @@ td.index-cell {
     border-right: 1px solid var(--vscode-editorWidget-border);
     box-sizing: border-box;
     left: 0;
-    min-width: 50px;
     position: sticky;
     text-align: right;
     padding: 5px 10px 5px 0px;

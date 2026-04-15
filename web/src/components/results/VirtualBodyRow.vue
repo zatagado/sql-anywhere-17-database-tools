@@ -28,6 +28,5 @@ td {
 
 .virtual-index-cell {
     box-sizing: border-box;
-    min-width: 50px;
 }
 </style>
