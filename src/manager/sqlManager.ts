@@ -5,9 +5,9 @@ import {
 } from "vscode";
 
 export enum DatabaseObjectType {
-    Table = 'Table',
-    View = 'View',
-    Procedure = 'Procedure',
+    Table = 'Tables',
+    View = 'Views',
+    Procedure = 'Procedures',
 }
 
 export interface Sql {

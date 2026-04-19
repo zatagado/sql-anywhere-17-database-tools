@@ -84,16 +84,17 @@ export class ConnectionManager {
         );
     }
 
-    static execute(dataSource: DataSource, query: string, updateRecent: boolean = true): Promise<odbc.Result<unknown>> {
+    static execute(dataSource: DataSource, query: string,
+        updateRecent: boolean = true): Promise<odbc.Result<unknown>[]> {
         if (updateRecent) {
             this.updateRecentStack(dataSource);
         }
 
         const result = dataSource.getConnection().then(connection =>
-            connection.query(query).catch(() =>
-                dataSource.reconnect().then(newConnection => newConnection.query(query))
+            connection.query(query, { multipleResultSets: true }).catch(() =>
+                dataSource.reconnect().then(newConnection => newConnection.query(query, { multipleResultSets: true }))
             )
-        );
+        ).then(raw => (Array.isArray(raw) ? raw : [raw]) as odbc.Result<unknown>[]);
 
         Promise.race([result, new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Loading')), LOADING_RESPONSE_TIMEOUT_MS))])

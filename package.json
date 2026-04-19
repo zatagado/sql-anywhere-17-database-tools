@@ -3,7 +3,12 @@
     "publisher": "sql-anywhere-17-database-tools",
     "displayName": "SQL Anywhere 17 Database Tools",
     "description": "",
-    "version": "0.1.6",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/zatagado/sql-anywhere-17-database-tools.git"
+    },
+    "license": "MIT",
+    "version": "0.1.7",
     "engines": {
         "vscode": "^1.105.0"
     },
@@ -180,6 +185,8 @@
         "watch:esbuild": "node esbuild.js --watch",
         "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
         "package": "yarn run check-types && yarn run lint && node esbuild.js --production",
+        "rebuild-odbc": "yarn upgrade odbc@git+https://github.com/zatagado/node-odbc.git#main && yarn --cwd node_modules/odbc run build",
+        "vsce": "vsce",
         "build:web": "yarn --cwd web run build-only",
         "compile-tests": "tsc -p . --outDir out",
         "watch-tests": "tsc -p . -w --outDir out",
@@ -197,11 +204,12 @@
         "@vscode/vsce": "^3.7.1",
         "esbuild": "^0.27.3",
         "eslint": "^9.39.3",
+        "node-gyp": "^12.2.0",
         "npm-run-all": "^4.1.5",
         "typescript": "^5.9.3",
         "typescript-eslint": "^8.56.1"
     },
     "dependencies": {
-        "odbc": "^2.4.9"
+        "odbc": "git+https://github.com/zatagado/node-odbc.git#main"
     }
 }
