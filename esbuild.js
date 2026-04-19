@@ -48,9 +48,25 @@ const nativeModulePlugin = {
 			`,
 			loader: 'js',
 		}));
-		build.onEnd(() => {
-			const src = path.join(__dirname, 'node_modules', 'odbc', 'lib', 'bindings', 'napi-v8', 'odbc.node');
+		build.onEnd((result) => {
+			if (result.errors.length) {
+				return;
+			}
+			const odbcPackageJson = path.join(__dirname, 'node_modules', 'odbc', 'package.json');
+			if (!fs.existsSync(odbcPackageJson)) {
+				throw new Error(
+					'[native-module] node_modules/odbc is missing. Run yarn install.',
+				);
+			}
+			const preGyp = require('@mapbox/node-pre-gyp');
+			const src = preGyp.find(odbcPackageJson);
 			const dest = path.join(__dirname, 'dist', 'odbc.node');
+			if (!fs.existsSync(src)) {
+				throw new Error(
+					`[native-module] No ODBC add-on at ${src}. Run yarn rebuild-odbc (or yarn install in node_modules/odbc) to compile the native module.`,
+				);
+			}
+			fs.mkdirSync(path.dirname(dest), { recursive: true });
 			try {
 				fs.unlinkSync(dest);
 			} catch (/** @type {any} */ e) {

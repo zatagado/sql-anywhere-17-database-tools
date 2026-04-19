@@ -41,5 +41,6 @@ Extension settings can be found under **Settings** → **Extensions** → **SQL 
 
 ```bash
 yarn install
+yarn run rebuild-odbc
 yarn run vsce package
 ```

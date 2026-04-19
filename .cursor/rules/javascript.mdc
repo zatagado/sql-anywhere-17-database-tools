@@ -1,9 +1,0 @@
----
-alwaysApply: true
----
-
-Only work on the parts of the code to achieve the functionality . Only refactor the previously existing code unless specified. 
-
-Reduce reliance on helper function in JS, unless the current function is too big or the functionality can be used in multiple places. 
-
-Reduce overreliance on checking if a variable is null, unless absolutely certain a variable will sometimes be null. This will be tested.

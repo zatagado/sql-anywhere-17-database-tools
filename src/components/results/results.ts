@@ -129,26 +129,30 @@ export function activate(context: ExtensionContext): Disposable[] {
                 viewColumn: editor.viewColumn ?? ViewColumn.Active
             });
             await commands.executeCommand('workbench.action.newGroupBelow');
-            const newPanel = window.createWebviewPanel('webview', panelTitle,
+            const panel = window.createWebviewPanel('webview', panelTitle,
                 { viewColumn: ViewColumn.Active },
                 {
                     enableScripts: true,
                     retainContextWhenHidden: true
                 }
             );
+            panel.iconPath = {
+                light: Uri.joinPath(context.extensionUri, 'resources', 'light', 'result-set.svg'),
+                dark: Uri.joinPath(context.extensionUri, 'resources', 'dark', 'result-set.svg')
+            };
 
-            newPanel.onDidDispose(() => {
+            panel.onDidDispose(() => {
                 const entry = Results.map.get(document);
                 if (!entry) {
                     return;
                 }
-                entry.panels = entry.panels.filter(mapPanel => mapPanel !== newPanel);
+                entry.panels = entry.panels.filter(mapPanel => mapPanel !== panel);
                 if (entry.panels.length === 0) {
                     entry.dataSource = null;
                 }
             });
-            newPanel.webview.html = getResultsWebviewHtml(newPanel, context.extensionUri);
-            resultEntry.panels.push(newPanel);
+            panel.webview.html = getResultsWebviewHtml(panel, context.extensionUri);
+            resultEntry.panels.push(panel);
         }
         else {
             // Dispose of all panels that are not the first one.
@@ -159,22 +163,55 @@ export function activate(context: ExtensionContext): Disposable[] {
             resultEntry.panels[0]!.title = panelTitle;
         }
 
-        const panel = resultEntry.panels[0]!;
-        panel.reveal(panel.viewColumn, false);
-        panel.webview.postMessage({ type: 'onQueryLoading' });
+        const firstPanel = resultEntry.panels[0]!;
+        firstPanel.reveal(firstPanel.viewColumn!, false);
 
-        ResultsRest.executeScript(dataSource, queries, !hadExistingDataSource).then(result => {
-            panel.webview.postMessage({
-                type: 'onQueryResult',
-                rows: result,
-                columns: result.columns,
-                count: result.count,
-                statement: result.statement,
-                return: result.return,
-                parameters: result.parameters
-            });
+        firstPanel.webview.postMessage({ type: 'onQueryLoading' });
+
+        ResultsRest.executeScript(dataSource, queries, !hadExistingDataSource).then(resultSets => {
+            for (let i = 1; i < resultSets.length; i++) {
+                const panel = window.createWebviewPanel('webview', `${panelTitle} (${i + 1})`,
+                    { viewColumn: firstPanel.viewColumn! },
+                    {
+                        enableScripts: true,
+                        retainContextWhenHidden: true
+                    }
+                );
+                panel.iconPath = {
+                    light: Uri.joinPath(context.extensionUri, 'resources', 'light', 'result-set.svg'),
+                    dark: Uri.joinPath(context.extensionUri, 'resources', 'dark', 'result-set.svg')
+                };
+
+                panel.onDidDispose(() => {
+                    const entry = Results.map.get(document);
+                    if (!entry) {
+                        return;
+                    }
+                    entry.panels = entry.panels.filter(mapPanel => mapPanel !== panel);
+                    if (entry.panels.length === 0) {
+                        entry.dataSource = null;
+                    }
+                });
+                panel.webview.html = getResultsWebviewHtml(panel, context.extensionUri);
+                resultEntry.panels.push(panel);
+            }
+
+            firstPanel.reveal(firstPanel.viewColumn ?? ViewColumn.Active, false);
+
+            for (let i = 0; i < resultSets.length; i++) {
+                const panel = resultEntry.panels[i]!;
+                panel.webview.postMessage({
+                    type: 'onQueryResult',
+                    rows: resultSets[i],
+                    columns: resultSets[i].columns,
+                    count: resultSets[i].count,
+                    statement: resultSets[i].statement,
+                    return: resultSets[i].return,
+                    parameters: resultSets[i].parameters
+                });
+            }
         }, err => {
-            panel.webview.postMessage({
+            firstPanel.webview.postMessage({
                 type: 'onQueryError',
                 message: formatExecutionError(err)
             });
