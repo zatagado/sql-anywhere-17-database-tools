@@ -185,7 +185,7 @@
         "watch:esbuild": "node esbuild.js --watch",
         "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
         "package": "yarn run check-types && yarn run lint && node esbuild.js --production",
-        "rebuild-odbc": "yarn upgrade odbc@git+https://github.com/zatagado/node-odbc.git#main && yarn --cwd node_modules/odbc run build",
+        "rebuild-odbc": "yarn install && npm --prefix ../node-odbc install && npm --prefix ../node-odbc run build && node esbuild.js",
         "vsce": "vsce",
         "build:web": "yarn --cwd web run build-only",
         "compile-tests": "tsc -p . --outDir out",
@@ -210,6 +210,6 @@
         "typescript-eslint": "^8.56.1"
     },
     "dependencies": {
-        "odbc": "git+https://github.com/zatagado/node-odbc.git#main"
+        "odbc": "link:../node-odbc"
     }
 }

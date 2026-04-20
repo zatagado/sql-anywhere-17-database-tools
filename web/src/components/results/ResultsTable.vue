@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import type { ColumnDefinition, Result } from 'odbc';
 import ResultsHeader from './ResultsHeader.vue';
 import ResultsBody from './ResultsBody.vue';
+import { isNumericSqlDataType } from '../../utils';
 
 const props = defineProps<{
     queryResult: Result<unknown>
@@ -86,13 +87,10 @@ const sortState = ref<{ column: string | null; direction: SortDirection }>({
 // TODO there is an issue where sorting with multiple of the same column will sort both, but they may have different data
 function onSortColumn(sort: { column: Column; index: number }) {
     function compare(a: unknown, b: unknown, dataType: number): number {
-        switch (dataType) {
-            case 4:
-            case 5:
-                return Number(a) - Number(b);
-            default:
-                return String(a ?? '').localeCompare(String(b ?? ''));
+        if (isNumericSqlDataType(dataType)) {
+            return Number(a) - Number(b);
         }
+        return String(a ?? '').localeCompare(String(b ?? ''));
     }
 
     if (sortState.value.column === sort.column.name) {

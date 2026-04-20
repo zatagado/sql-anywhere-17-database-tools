@@ -1,6 +1,14 @@
 const esbuild = require("esbuild");
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
+
+/**
+ * @param {string} filePath
+ */
+function sha256File(filePath) {
+	return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+}
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
@@ -67,22 +75,28 @@ const nativeModulePlugin = {
 				);
 			}
 			fs.mkdirSync(path.dirname(dest), { recursive: true });
+
+			const srcHash = sha256File(src);
+			if (fs.existsSync(dest) && sha256File(dest) === srcHash) {
+				console.log("[native-module] dist/odbc.node already matches linked build — skipping copy");
+				return;
+			}
+
 			try {
-				fs.unlinkSync(dest);
-			} catch (/** @type {any} */ e) {
-				if (e.code !== 'ENOENT') {
-					const srcStat = fs.statSync(src);
-					try {
-						const destStat = fs.statSync(dest);
-						if (srcStat.size === destStat.size && srcStat.mtimeMs <= destStat.mtimeMs) {
-							console.log('[native-module] odbc.node is locked but already up to date — skipping copy');
-							return;
-						}
-					} catch { /* dest gone — will copy below */ }
-					throw e;
+				if (fs.existsSync(dest)) {
+					fs.unlinkSync(dest);
 				}
+			} catch (/** @type {any} */ e) {
+				if (e.code === "EBUSY" || e.code === "EPERM" || e.code === "EACCES") {
+					throw new Error(
+						"[native-module] Cannot replace dist/odbc.node (file is locked by a running Extension Host). " +
+							"Stop debugging and close the Extension Development Host window, then run node esbuild.js or yarn run rebuild-odbc again.",
+					);
+				}
+				throw e;
 			}
 			fs.copyFileSync(src, dest);
+			console.log(`[native-module] copied native addon: ${src} -> ${dest}`);
 		});
 	},
 };
