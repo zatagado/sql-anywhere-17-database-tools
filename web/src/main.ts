@@ -8,3 +8,5 @@ const app = createApp(App)
 app.use(createPinia())
 
 app.mount('#app')
+
+window.__vscodeApi__?.postMessage({ type: 'onWebviewReady' })

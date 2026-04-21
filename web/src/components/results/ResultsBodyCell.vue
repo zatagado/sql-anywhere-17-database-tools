@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import { isNumericSqlDataType } from '../../utils';
+
 const props = defineProps<{
     column: {
         name: string,
@@ -14,13 +16,7 @@ const props = defineProps<{
 }>()
 
 function getTextClass(dataType: number) {
-    switch (dataType) {
-        case 4:
-        case 5:
-            return 'numeric';
-        default:
-            return 'string';
-    }
+    return isNumericSqlDataType(dataType) ? 'numeric' : 'string';
 }
 const textClass = getTextClass(props.column.dataType);
 const nullClass = ref('');
