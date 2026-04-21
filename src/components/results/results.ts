@@ -16,6 +16,22 @@ import { ResultsRest } from '../../rest/results/resultsRest';
 import { NodeOdbcError } from 'odbc';
 import { SqlManager } from '../../manager/sqlManager';
 
+function waitForWebviewReady(panel: WebviewPanel): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const messageSub = panel.webview.onDidReceiveMessage((msg: { type?: string }) => {
+            if (msg?.type === 'onWebviewReady') {
+                messageSub.dispose();
+                disposeSub.dispose();
+                resolve();
+            }
+        });
+        const disposeSub = panel.onDidDispose(() => {
+            messageSub.dispose();
+            reject(new Error('Webview was closed before it became ready'));
+        });
+    });
+}
+
 export type ResultsEntry = {
     editor: TextEditor;
     dataSource: DataSource | null;
@@ -29,22 +45,52 @@ export class Results {
 function getResultsWebviewHtml(panel: WebviewPanel, extensionUri: Uri): string {
     const scriptSrc = panel.webview.asWebviewUri(Uri.joinPath(extensionUri, 'web', 'dist', 'assets', 'index.js'));
     const cssSrc = panel.webview.asWebviewUri(Uri.joinPath(extensionUri, 'web', 'dist', 'assets', 'index.css'));
+    const loadingSvg = panel.webview.asWebviewUri(Uri.joinPath(extensionUri, 'web', 'resources', 'loading.svg'));
 
     return `<!DOCTYPE html>
             <html lang="en">
             <head>
                 <link rel="stylesheet" href="${cssSrc}" />
+                <style>
+                    html, body { height: 100%; margin: 0; }
+                    #app { min-height: 100%; }
+                    .results-webview-boot {
+                        box-sizing: border-box;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        width: 100%;
+                        min-height: 100vh;
+                        padding: 1rem;
+                    }
+                    .results-webview-boot-spinner {
+                        width: 48px;
+                        height: 48px;
+                        flex-shrink: 0;
+                        background-color: var(--vscode-foreground);
+                        mask-image: url('${loadingSvg}');
+                        mask-position: center;
+                        mask-repeat: no-repeat;
+                        mask-size: contain;
+                        animation: results-webview-boot-spin 0.9s linear infinite;
+                    }
+                    @keyframes results-webview-boot-spin {
+                        from { transform: rotate(0deg); }
+                        to { transform: rotate(360deg); }
+                    }
+                </style>
             </head>
             <body>
                 <noscript>You need to enable JavaScript to run this app.</noscript>
-                <div id="app"></div>
+                <div id="app">
+                    <div class="results-webview-boot">
+                        <div class="results-webview-boot-spinner"></div>
+                    </div>
+                </div>
                 <script>
                     const vscode = acquireVsCodeApi();
                     window.__vscodeApi__ = vscode;
                     window.__VSCODE_WEBVIEW_VIEW__ = 'queryResults';
-                    window.addEventListener('load', function () {
-                        vscode.postMessage({ type: 'onWebviewReady' });
-                    });
                 </script>
                 <script type="module" src="${scriptSrc}"></script>
             </body>
@@ -124,6 +170,7 @@ export function activate(context: ExtensionContext): Disposable[] {
 
         // Need to create at least one panel to indicate we are loading.
         const panelTitle = `${dataSource.getName()} - ${shortName}`;
+        let createdFirstPanel = false;
         if (resultEntry.panels.length === 0) {
             await window.showTextDocument(editor.document, {
                 viewColumn: editor.viewColumn ?? ViewColumn.Active
@@ -153,6 +200,7 @@ export function activate(context: ExtensionContext): Disposable[] {
             });
             panel.webview.html = getResultsWebviewHtml(panel, context.extensionUri);
             resultEntry.panels.push(panel);
+            createdFirstPanel = true;
         }
         else {
             // Dispose of all panels that are not the first one.
@@ -166,48 +214,68 @@ export function activate(context: ExtensionContext): Disposable[] {
         const firstPanel = resultEntry.panels[0]!;
         firstPanel.reveal(firstPanel.viewColumn!, false);
 
-        firstPanel.webview.postMessage({ type: 'onQueryLoading' });
-
-        ResultsRest.executeScript(dataSource, queries, !hadExistingDataSource).then(resultSets => {
-            for (let i = 1; i < resultSets.length; i++) {
-                const panel = window.createWebviewPanel('webview', `${panelTitle} (${i + 1})`,
-                    { viewColumn: firstPanel.viewColumn! },
-                    {
-                        enableScripts: true,
-                        retainContextWhenHidden: true
-                    }
-                );
-                panel.iconPath = {
-                    light: Uri.joinPath(context.extensionUri, 'resources', 'light', 'result-set.svg'),
-                    dark: Uri.joinPath(context.extensionUri, 'resources', 'dark', 'result-set.svg')
-                };
-
-                panel.onDidDispose(() => {
-                    const entry = Results.map.get(document);
-                    if (!entry) {
-                        return;
-                    }
-                    entry.panels = entry.panels.filter(mapPanel => mapPanel !== panel);
-                    if (entry.panels.length === 0) {
-                        entry.dataSource = null;
-                    }
-                });
-                panel.webview.html = getResultsWebviewHtml(panel, context.extensionUri);
-                resultEntry.panels.push(panel);
+        try {
+            if (createdFirstPanel) {
+                await waitForWebviewReady(firstPanel);
             }
+            firstPanel.webview.postMessage({ type: 'onQueryLoading' });
+        } catch (e) {
+            firstPanel.webview.postMessage({
+                type: 'onQueryError',
+                message: formatExecutionError(e)
+            });
+            return;
+        }
 
-            firstPanel.reveal(firstPanel.viewColumn ?? ViewColumn.Active, false);
+        ResultsRest.executeScript(dataSource, queries, !hadExistingDataSource).then(async resultSets => {
+            try {
+                for (let i = 1; i < resultSets.length; i++) {
+                    const panel = window.createWebviewPanel('webview', `${panelTitle} (${i + 1})`,
+                        { viewColumn: firstPanel.viewColumn! },
+                        {
+                            enableScripts: true,
+                            retainContextWhenHidden: true
+                        }
+                    );
+                    panel.iconPath = {
+                        light: Uri.joinPath(context.extensionUri, 'resources', 'light', 'result-set.svg'),
+                        dark: Uri.joinPath(context.extensionUri, 'resources', 'dark', 'result-set.svg')
+                    };
 
-            for (let i = 0; i < resultSets.length; i++) {
-                const panel = resultEntry.panels[i]!;
-                panel.webview.postMessage({
-                    type: 'onQueryResult',
-                    rows: resultSets[i],
-                    columns: resultSets[i].columns,
-                    count: resultSets[i].count,
-                    statement: resultSets[i].statement,
-                    return: resultSets[i].return,
-                    parameters: resultSets[i].parameters
+                    panel.onDidDispose(() => {
+                        const entry = Results.map.get(document);
+                        if (!entry) {
+                            return;
+                        }
+                        entry.panels = entry.panels.filter(mapPanel => mapPanel !== panel);
+                        if (entry.panels.length === 0) {
+                            entry.dataSource = null;
+                        }
+                    });
+                    panel.webview.html = getResultsWebviewHtml(panel, context.extensionUri);
+                    resultEntry.panels.push(panel);
+                }
+
+                await Promise.all(resultEntry.panels.slice(1).map(loadingPanel => waitForWebviewReady(loadingPanel)));
+
+                firstPanel.reveal(firstPanel.viewColumn ?? ViewColumn.Active, false);
+
+                for (let i = 0; i < resultSets.length; i++) {
+                    const panel = resultEntry.panels[i]!;
+                    panel.webview.postMessage({
+                        type: 'onQueryResult',
+                        rows: Array.from(resultSets[i]),
+                        columns: resultSets[i].columns,
+                        count: resultSets[i].count,
+                        statement: resultSets[i].statement,
+                        return: resultSets[i].return,
+                        parameters: resultSets[i].parameters
+                    });
+                }
+            } catch (e) {
+                firstPanel.webview.postMessage({
+                    type: 'onQueryError',
+                    message: formatExecutionError(e)
                 });
             }
         }, err => {
