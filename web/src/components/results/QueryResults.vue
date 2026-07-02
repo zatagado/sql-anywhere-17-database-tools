@@ -24,7 +24,8 @@ window.addEventListener('message', (event) => {
                 count: message.count,
                 statement: message.statement,
                 return: message.return,
-                parameters: message.parameters
+                parameters: message.parameters,
+                truncated: message.truncated
             }) as Result<unknown>;
             break;
         }
@@ -43,9 +44,11 @@ window.addEventListener('message', (event) => {
         <div v-if="loading" class="loading-container">
             <div class="loading-spinner"/>
         </div>
-        <ResultsTable v-else-if="queryResult && queryResult.columns.length > 0" :queryResult="queryResult" />
-        <div v-else-if="queryError" class="error-msg">{{ queryError }}</div>
-        <div v-else class="empty-msg">No result set.</div>
+        <template v-else>
+            <ResultsTable v-if="queryResult && queryResult.columns.length > 0" :queryResult="queryResult" />
+            <div v-else-if="queryError" class="error-msg">{{ queryError }}</div>
+            <div v-else class="empty-msg">No result set.</div>
+        </template>
     </div>
 </template>
 

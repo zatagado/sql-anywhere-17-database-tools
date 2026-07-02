@@ -85,7 +85,7 @@ const resizeHandleStyle = computed(() => ({ height: `${headerHeight.value}px` })
             <th class="results-header index"></th>
             <ResultsHeaderCell
                 v-for="(column, index) in columnProps"
-                :key="column.def.name"
+                :key="index"
                 :element="column.ref"
                 :activeIndex="activeIndex"
                 :column="column.def"

@@ -10,7 +10,7 @@ import {
     workspace,
     TextDocument
 } from 'vscode';
-import { DataSource } from '../../manager/connectionManager';
+import { ConnectionManager, DataSource } from '../../manager/connectionManager';
 import { selectDatasource } from '../selection/datasourcePick';
 import { ResultsRest } from '../../rest/results/resultsRest';
 import { NodeOdbcError } from 'odbc';
@@ -269,7 +269,9 @@ export function activate(context: ExtensionContext): Disposable[] {
                         count: resultSets[i].count,
                         statement: resultSets[i].statement,
                         return: resultSets[i].return,
-                        parameters: resultSets[i].parameters
+                        parameters: resultSets[i].parameters,
+                        truncated: resultSets[i].truncated ?? false,
+                        maxRows: ConnectionManager.getMaxResultRows()
                     });
                 }
             } catch (e) {

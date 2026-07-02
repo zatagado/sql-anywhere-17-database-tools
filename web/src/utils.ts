@@ -1,3 +1,5 @@
+export type ResultRow = (string | number | boolean | null)[];
+
 export function isNumericSqlDataType(dataType: number): boolean {
     switch (dataType) {
         case 2:  // SQL_NUMERIC

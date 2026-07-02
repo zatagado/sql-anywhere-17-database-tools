@@ -10,7 +10,7 @@ const props = defineProps<{
         scrollTop: number,
         innerHeight: number,
         headerHeight: number,
-        sortState: { column: string | null; direction: 'asc' | 'desc' | null }
+        sortState: { columnIndex: number | null; direction: 'asc' | 'desc' | null }
     }
 }>();
 

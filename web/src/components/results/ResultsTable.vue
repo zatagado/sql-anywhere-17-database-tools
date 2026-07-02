@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import type { ColumnDefinition, Result } from 'odbc';
 import ResultsHeader from './ResultsHeader.vue';
 import ResultsBody from './ResultsBody.vue';
-import { isNumericSqlDataType } from '../../utils';
+import { isNumericSqlDataType, type ResultRow } from '../../utils';
 
 const props = defineProps<{
     queryResult: Result<unknown>
@@ -50,10 +50,10 @@ function calculateIndexColumnWidth(queryResult: Result<unknown>): number {
 const indexColumnWidth = ref(calculateIndexColumnWidth(props.queryResult));
 
 function calculateColumnWidths(queryResult: Result<unknown>) {
-    function getLongestValue(column: Column, queryResult: Result<unknown>): number {
+    function getLongestValue(columnIndex: number, column: Column, queryResult: Result<unknown>): number {
         let max = column.name.length;
         for (const row of queryResult) {
-            const length = String((row as Record<string, unknown>)[column.name] ?? '').length;
+            const length = String((row as ResultRow)[columnIndex] ?? '').length;
             if (length > max) {
                 max = length;
             }
@@ -69,8 +69,8 @@ function calculateColumnWidths(queryResult: Result<unknown>) {
     const charWidth = context?.measureText('0').width;
     canvas.remove();
 
-    return queryResult.columns.map((column) =>
-        charWidth! * Math.min(getLongestValue(column as Column, queryResult) + padding, maxColumnWidth));
+    return queryResult.columns.map((column, columnIndex) =>
+        charWidth! * Math.min(getLongestValue(columnIndex, column as Column, queryResult) + padding, maxColumnWidth));
 }
 
 const columnWidths = ref<number[]>(calculateColumnWidths(props.queryResult));
@@ -79,12 +79,11 @@ const tableStyle = computed(() => ({
     gridTemplateColumns: [`${indexColumnWidth.value}px`, ...columnWidths.value.map((width) => `${width}px`), fillerColumn].join(' ')
 }));
 
-const sortState = ref<{ column: string | null; direction: SortDirection }>({
-    column: null,
+const sortState = ref<{ columnIndex: number | null; direction: SortDirection }>({
+    columnIndex: null,
     direction: null
 });
 
-// TODO there is an issue where sorting with multiple of the same column will sort both, but they may have different data
 function onSortColumn(sort: { column: Column; index: number }) {
     function compare(a: unknown, b: unknown, dataType: number): number {
         if (isNumericSqlDataType(dataType)) {
@@ -93,7 +92,7 @@ function onSortColumn(sort: { column: Column; index: number }) {
         return String(a ?? '').localeCompare(String(b ?? ''));
     }
 
-    if (sortState.value.column === sort.column.name) {
+    if (sortState.value.columnIndex === sort.index) {
         let direction: SortDirection;
         switch (sortState.value.direction) {
             case 'asc':
@@ -108,23 +107,23 @@ function onSortColumn(sort: { column: Column; index: number }) {
         }
 
         sortState.value = {
-            column: sort.column.name,
+            columnIndex: sort.index,
             direction: direction
         };
     }
     else {
-        sortState.value = { column: sort.column.name, direction: 'asc' };
+        sortState.value = { columnIndex: sort.index, direction: 'asc' };
     }
 
     const direction = sortState.value.direction === 'asc' ? 1 : -1;
     const dataType = sort.column.dataType;
-    const key = sort.column.name;
+    const columnIndex = sort.index;
     const rows = props.queryResult;
 
     rows.sort((rowA, rowB) =>
         direction * compare(
-            (rowA as Record<string, unknown>)[key],
-            (rowB as Record<string, unknown>)[key],
+            (rowA as ResultRow)[columnIndex],
+            (rowB as ResultRow)[columnIndex],
             dataType
         ));
     for (let i = 0; i < rows.columns.length; i++) {

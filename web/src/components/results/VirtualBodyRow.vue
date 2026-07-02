@@ -17,7 +17,7 @@ const virtualRowStyle = computed(() => ({ height: props.height ? `${props.height
 <template>
     <tr class="contents">
         <td class="virtual-index-cell" :style="virtualRowStyle"></td>
-        <td v-for="column in columns" :key="column.name"></td>
+        <td v-for="(_column, columnIndex) in columns" :key="columnIndex"></td>
         <td></td>
     </tr>
 </template>

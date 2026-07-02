@@ -62,6 +62,11 @@ export class ConnectionManager {
         return this.stack.find(dataSource => dataSource.getName() === name);
     }
 
+    static getMaxResultRows(): number {
+        return workspace.getConfiguration('sql-anywhere-17-database-tools.results')
+            .get<number>('maxRows')!;
+    }
+
     private static updateRecentStack(dataSource: DataSource) {
         if (this.stack.some(otherDataSource => 
             otherDataSource.getName() === dataSource.getName() && otherDataSource.getType() === dataSource.getType())) {
@@ -90,9 +95,13 @@ export class ConnectionManager {
             this.updateRecentStack(dataSource);
         }
 
+        const queryOptions: odbc.QueryOptions = {
+            multipleResultSets: true,
+            maxRows: this.getMaxResultRows()
+        };
         const result = dataSource.getConnection().then(connection =>
-            connection.query(query, { multipleResultSets: true }).catch(() =>
-                dataSource.reconnect().then(newConnection => newConnection.query(query, { multipleResultSets: true }))
+            connection.query(query, queryOptions).catch(() =>
+                dataSource.reconnect().then(newConnection => newConnection.query(query, queryOptions))
             )
         ).then(raw => (Array.isArray(raw) ? raw : [raw]) as odbc.Result<unknown>[]);
 
@@ -116,9 +125,12 @@ export class ConnectionManager {
             this.updateRecentStack(dataSource);
         }
 
+        const queryOptions: odbc.QueryOptions = {
+            maxRows: this.getMaxResultRows()
+        };
         const result = dataSource.getConnection().then(connection =>
-            connection.query(query).catch(() =>
-                dataSource.reconnect().then(newConnection => newConnection.query(query))
+            connection.query(query, queryOptions).catch(() =>
+                dataSource.reconnect().then(newConnection => newConnection.query(query, queryOptions))
             )
         );
 
@@ -152,7 +164,10 @@ export class DataSource {
     }
 
     private async getPool(): Promise<odbc.Pool> {
-        this.pool = this.pool ?? odbc.pool(`DSN=${this.name}`);
+        this.pool = this.pool ?? odbc.pool({
+            connectionString: `DSN=${this.name}`,
+            fetchArray: true
+        });
         return this.pool;
     }
 
@@ -198,7 +213,10 @@ export class DataSource {
     }
 
     private getDirectConnection(): Promise<odbc.Connection> {
-        return odbc.connect(`DSN=${this.name}`);
+        return odbc.connect({
+            connectionString: `DSN=${this.name}`,
+            fetchArray: true
+        });
     }
 
     getConnection(): Promise<odbc.Connection> {
