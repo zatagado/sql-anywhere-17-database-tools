@@ -67,6 +67,11 @@ export class ConnectionManager {
             .get<number>('maxRows')!;
     }
 
+    static getQueryTimeout(): number {
+        return workspace.getConfiguration('sql-anywhere-17-database-tools.results')
+            .get<number>('timeout')!;
+    }
+
     private static updateRecentStack(dataSource: DataSource) {
         if (this.stack.some(otherDataSource => 
             otherDataSource.getName() === dataSource.getName() && otherDataSource.getType() === dataSource.getType())) {
@@ -82,10 +87,8 @@ export class ConnectionManager {
         if (updateRecent) {
             this.updateRecentStack(dataSource);
         }
-        return dataSource.getConnection().then(connection =>
-            PreparedStatement.create(connection, query).catch(() =>
-                dataSource.reconnect().then(newConnection => PreparedStatement.create(newConnection, query))
-            )
+        return dataSource.getConnectionWithRetry().then(connection =>
+            PreparedStatement.create(connection, query)
         );
     }
 
@@ -99,10 +102,8 @@ export class ConnectionManager {
             multipleResultSets: true,
             maxRows: this.getMaxResultRows()
         };
-        const result = dataSource.getConnection().then(connection =>
-            connection.query(query, queryOptions).catch(() =>
-                dataSource.reconnect().then(newConnection => newConnection.query(query, queryOptions))
-            )
+        const result = dataSource.getConnectionWithRetry().then(connection =>
+            connection.query(query, queryOptions)
         ).then(raw => (Array.isArray(raw) ? raw : [raw]) as odbc.Result<unknown>[]);
 
         Promise.race([result, new Promise((_, reject) =>
@@ -128,10 +129,9 @@ export class ConnectionManager {
         const queryOptions: odbc.QueryOptions = {
             maxRows: this.getMaxResultRows()
         };
-        const result = dataSource.getConnection().then(connection =>
-            connection.query(query, queryOptions).catch(() =>
-                dataSource.reconnect().then(newConnection => newConnection.query(query, queryOptions))
-            )
+
+        const result = dataSource.getConnectionWithRetry().then(connection =>
+            connection.query(query, queryOptions)
         );
 
         Promise.race([result, new Promise((_, reject) =>
@@ -148,6 +148,10 @@ export class ConnectionManager {
 
         return result;
     }
+
+    //private static showProgressWhenSlow(dataSource: DataSource)
+
+    //private static executeWithReconnect()
 }
 
 export class DataSource {
@@ -184,22 +188,27 @@ export class DataSource {
         return !DataSource.getUsePooling() || this.pool !== undefined;
     }
 
-    async reconnect(): Promise<odbc.Connection> {
-        if (DataSource.getUsePooling()) {
-            this.disposePool();
-        }
+    private getDirectConnection(): Promise<odbc.Connection> {
+        return odbc.connect({
+            connectionString: `DSN=${this.name}`,
+            fetchArray: true
+        });
+    }
 
+    getConnection(): Promise<odbc.Connection> {
+        return DataSource.getUsePooling() ? this.getPool().then(pool => pool.connect()) : this.getDirectConnection();
+    }
+
+    async getConnectionWithRetry(): Promise<odbc.Connection> {
         for (let attempt = 0; attempt < DataSource.MAX_RECONNECT_ATTEMPTS; attempt++) {
-            if (attempt > 0) {
-                await new Promise(resolve => setTimeout(resolve, DataSource.RECONNECT_DELAY_MS));
-            }
             try {
-                return DataSource.getUsePooling() ? this.getPool().then(pool => pool.connect()) : this.getDirectConnection();
+                return this.getConnection();
             } catch (err) {
                 if (DataSource.getUsePooling()) {
                     this.disposePool();
                 }
             }
+            await new Promise(resolve => setTimeout(resolve, DataSource.RECONNECT_DELAY_MS));
         }
 
         throw new Error(`Failed to reconnect to datasource "${this.name}"
@@ -210,17 +219,6 @@ export class DataSource {
         const pool = this.pool;
         this.pool = undefined;
         return pool?.then(pool => pool.close());
-    }
-
-    private getDirectConnection(): Promise<odbc.Connection> {
-        return odbc.connect({
-            connectionString: `DSN=${this.name}`,
-            fetchArray: true
-        });
-    }
-
-    getConnection(): Promise<odbc.Connection> {
-        return DataSource.getUsePooling() ? this.getPool().then(pool => pool.connect()) : this.getDirectConnection();
     }
 
     getName() {
@@ -265,17 +263,17 @@ export class PreparedStatement {
         }
 
         return this.statement.bind(Array.from(this.parameters.values()).sort(
-            (a, b) => a.position - b.position).map(parameterData => parameterData.value)).then(
-                () => this.statement.execute().then(
-                    result => {
-                        this.statement.close();
-                        return result;
-                    },
-                    err => {
-                        this.statement.close();
-                        throw err;
-                    }
-                )
+                (a, b) => a.position - b.position).map(parameterData => parameterData.value)).then(
+                    () => this.statement.execute().then(
+                        result => {
+                            this.statement.close();
+                            return result;
+                        },
+                        err => {
+                            this.statement.close();
+                            throw err;
+                        }
+                    )
             );
     }
 }

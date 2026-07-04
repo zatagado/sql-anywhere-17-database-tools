@@ -90,7 +90,13 @@
                     "type": "number",
                     "default": 10000,
                     "minimum": 1,
-                    "description": "Maximum number of rows to fetch per result set. Additional rows are discarded at the ODBC layer to limit memory use."
+                    "description": "Maximum number of rows to fetch per result set."
+                },
+                "sql-anywhere-17-database-tools.results.timeout": {
+                    "type": "number",
+                    "default": 15,
+                    "minimum": 1,
+                    "description": "Maximum number of seconds to wait for a query before closing the connection."
                 }
             }
         },

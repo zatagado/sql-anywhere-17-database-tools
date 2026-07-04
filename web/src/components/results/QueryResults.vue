@@ -1,11 +1,22 @@
 <script setup lang="ts">
 import ResultsTable from './ResultsTable.vue';
 import type { Result } from 'odbc';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 const loading = ref(true);
 const queryError = ref<string>();
 const queryResult = ref<Result<unknown>>();
+
+const rowCountLabel = computed(() => {
+    if (!queryResult.value) {
+        return '';
+    }
+
+    const count = queryResult.value.length;
+    const label = count === 1 ? 'Row' : 'Rows';
+
+    return queryResult.value.truncated ? `${count}+ ${label}` : `${count} ${label}`;
+});
 
 window.addEventListener('message', (event) => {
     const message = event.data;
@@ -45,7 +56,13 @@ window.addEventListener('message', (event) => {
             <div class="loading-spinner"/>
         </div>
         <template v-else>
-            <ResultsTable v-if="queryResult && queryResult.columns.length > 0" :queryResult="queryResult" />
+            <div
+                v-if="queryResult && queryResult.columns.length > 0"
+                class="results-with-footer"
+            >
+                <ResultsTable class="results-table-area" :queryResult="queryResult" />
+                <div class="row-count-footer">{{ rowCountLabel }}</div>
+            </div>
             <div v-else-if="queryError" class="error-msg">{{ queryError }}</div>
             <div v-else class="empty-msg">No result set.</div>
         </template>
@@ -60,6 +77,36 @@ window.addEventListener('message', (event) => {
     flex-direction: column;
     flex: 1 1 auto;
     min-height: 100%;
+    height: 100%;
+}
+
+.results-with-footer {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+}
+
+.results-table-area {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* todo might need to change the color of the background */
+.row-count-footer {
+    flex-shrink: 0;
+    box-sizing: border-box;
+    height: calc(var(--vscode-editor-font-size) + 0.75rem);
+    padding: 0.375rem 0.5rem 0;
+    border-top: 1px solid var(--vscode-panel-border);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+    font-family: var(--vscode-editor-font-family);
+    font-size: var(--vscode-editor-font-size);
+    line-height: 1;
 }
 
 .loading-container {
