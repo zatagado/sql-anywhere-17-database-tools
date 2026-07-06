@@ -1,10 +1,24 @@
 <script setup lang="ts">
 import ResultsTable from './ResultsTable.vue';
-import type { Result } from 'odbc';
+import type { ColumnDefinition, Result } from 'odbc';
 import { computed, ref } from 'vue';
 
 const loading = ref(true);
 const queryError = ref<string>();
+
+type QueryResultDetails = {
+    columns: ColumnDefinition[];
+    count: number;
+    statement: string;
+    return: number;
+    parameters: Array<number | string>;
+    truncated: boolean;
+    maxRows: number;
+};
+
+const queryResultDetails = ref<QueryResultDetails>();
+const queryResultRows = ref<unknown[]>();
+const queryResultRowsCount = ref<number>(0);
 const queryResult = ref<Result<unknown>>();
 
 const rowCountLabel = computed(() => {
@@ -24,20 +38,40 @@ window.addEventListener('message', (event) => {
         case 'onQueryLoading': {
             loading.value = true;
             queryError.value = undefined;
+            queryResultDetails.value = undefined;
+            queryResultRows.value = undefined;
+            queryResultRowsCount.value = 0;
             queryResult.value = undefined;
             break;
         }
-        case 'onQueryResult': {
-            loading.value = false;
-            queryError.value = undefined;
-            queryResult.value = Object.assign(message.rows, {
+        case 'onQueryResultDetails': {
+            queryResultDetails.value = Object.assign({}, {
                 columns: message.columns,
                 count: message.count,
                 statement: message.statement,
                 return: message.return,
                 parameters: message.parameters,
-                truncated: message.truncated
-            }) as Result<unknown>;
+                truncated: message.truncated ?? false,
+                maxRows: message.maxRows
+            });
+            break;
+        }
+        case 'onQueryResultRows': {
+            if (!queryResultRows.value) {
+                queryResultRows.value = new Array<unknown>(message.count);
+            }
+
+            for (let i = 0; i < message.rows.length; i++) {
+                queryResultRows.value[message.startIndex + i] = message.rows[i];
+            }
+            queryResultRowsCount.value += message.rows.length;
+
+            if (queryResultRowsCount.value === message.count) {
+                queryResult.value = Object.assign(queryResultRows.value, queryResultDetails.value);
+                loading.value = false;
+                queryError.value = undefined;
+                debugger;
+            }
             break;
         }
         case 'onQueryError': {

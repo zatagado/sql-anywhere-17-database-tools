@@ -102,23 +102,34 @@ export class ConnectionManager {
             multipleResultSets: true,
             maxRows: this.getMaxResultRows()
         };
-        const result = dataSource.getConnectionWithRetry().then(connection =>
+        return this.withTimeout(dataSource, dataSource.getConnectionWithRetry().then(connection =>
             connection.query(query, queryOptions)
-        ).then(raw => (Array.isArray(raw) ? raw : [raw]) as odbc.Result<unknown>[]);
+        ).then(raw => raw as odbc.Result<unknown>[]));
+    }
 
-        Promise.race([result, new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Loading')), LOADING_RESPONSE_TIMEOUT_MS))])
-            .catch(err => {
-                if (err instanceof Error && err.message === 'Loading') {
-                    window.withProgress({
-                        location: ProgressLocation.Notification,
-                        title: `${dataSource.getName()} is taking longer than expected to get results...`,
-                    }, () => result);
+    private static withTimeout<T>(
+        dataSource: DataSource, promise: Promise<T>
+    ): Promise<T> {
+        let hasCompleted = false;
+        promise.then(() => hasCompleted = true).catch(() => hasCompleted = true);
+        new Promise((_, reject) => {
+            setTimeout(() => {
+                if (!hasCompleted) {
+                    reject(new Error('Loading'));
                 }
+            }, LOADING_RESPONSE_TIMEOUT_MS);
+        }).catch(err => {
+            if (err instanceof Error && err.message === 'Loading') {
+                window.withProgress({
+                    location: ProgressLocation.Notification,
+                    title: `${dataSource.getName()} is taking longer than expected to get results...`,
+                }, () => promise);
+            }
+            else {
                 throw err;
-            });
-
-        return result;
+            }
+        });
+        return promise;
     }
 
     static executeAll(dataSource: DataSource, query: string, updateRecent: boolean = true): Promise<odbc.Result<unknown>> {
@@ -129,29 +140,10 @@ export class ConnectionManager {
         const queryOptions: odbc.QueryOptions = {
             maxRows: this.getMaxResultRows()
         };
-
-        const result = dataSource.getConnectionWithRetry().then(connection =>
+        return this.withTimeout(dataSource, dataSource.getConnectionWithRetry().then(connection =>
             connection.query(query, queryOptions)
-        );
-
-        Promise.race([result, new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Loading')), LOADING_RESPONSE_TIMEOUT_MS))])
-            .catch(err => {
-                if (err instanceof Error && err.message === 'Loading') {
-                    window.withProgress({
-                        location: ProgressLocation.Notification,
-                        title: `${dataSource.getName()} is taking longer than expected to get results...`,
-                    }, () => result);
-                }
-                throw err;
-            });
-
-        return result;
+        ));
     }
-
-    //private static showProgressWhenSlow(dataSource: DataSource)
-
-    //private static executeWithReconnect()
 }
 
 export class DataSource {
