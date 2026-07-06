@@ -8,7 +8,7 @@
         "url": "https://github.com/zatagado/sql-anywhere-17-database-tools.git"
     },
     "license": "MIT",
-    "version": "0.1.8",
+    "version": "0.2.0",
     "engines": {
         "vscode": "^1.105.0"
     },

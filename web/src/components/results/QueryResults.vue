@@ -16,10 +16,12 @@ type QueryResultDetails = {
     maxRows: number;
 };
 
+type QueryResult = Result<unknown> & { truncated?: boolean };
+
 const queryResultDetails = ref<QueryResultDetails>();
 const queryResultRows = ref<unknown[]>();
 const queryResultRowsCount = ref<number>(0);
-const queryResult = ref<Result<unknown>>();
+const queryResult = ref<QueryResult>();
 
 const rowCountLabel = computed(() => {
     if (!queryResult.value) {
@@ -67,7 +69,8 @@ window.addEventListener('message', (event) => {
             queryResultRowsCount.value += message.rows.length;
 
             if (queryResultRowsCount.value === message.count) {
-                queryResult.value = Object.assign(queryResultRows.value, queryResultDetails.value);
+                queryResult.value = Object.assign(
+                    queryResultRows.value, queryResultDetails.value) as QueryResult;
                 loading.value = false;
                 queryError.value = undefined;
                 debugger;
