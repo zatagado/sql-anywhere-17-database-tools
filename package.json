@@ -8,7 +8,7 @@
         "url": "https://github.com/zatagado/sql-anywhere-17-database-tools.git"
     },
     "license": "MIT",
-    "version": "0.1.8",
+    "version": "0.2.0",
     "engines": {
         "vscode": "^1.105.0"
     },
@@ -85,6 +85,18 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Use connection pooling for the database. Disabling this is recommended for databases with short connection timeouts."
+                },
+                "sql-anywhere-17-database-tools.results.maxRows": {
+                    "type": "number",
+                    "default": 10000,
+                    "minimum": 1,
+                    "description": "Maximum number of rows to fetch per result set."
+                },
+                "sql-anywhere-17-database-tools.results.timeout": {
+                    "type": "number",
+                    "default": 15,
+                    "minimum": 1,
+                    "description": "Maximum number of seconds to wait for a query before closing the connection."
                 }
             }
         },

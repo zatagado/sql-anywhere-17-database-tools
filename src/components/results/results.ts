@@ -10,11 +10,13 @@ import {
     workspace,
     TextDocument
 } from 'vscode';
-import { DataSource } from '../../manager/connectionManager';
+import { ConnectionManager, DataSource } from '../../manager/connectionManager';
 import { selectDatasource } from '../selection/datasourcePick';
 import { ResultsRest } from '../../rest/results/resultsRest';
 import { NodeOdbcError } from 'odbc';
 import { SqlManager } from '../../manager/sqlManager';
+
+const ROW_BATCH_SIZE = 1000000;
 
 function waitForWebviewReady(panel: WebviewPanel): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -262,15 +264,28 @@ export function activate(context: ExtensionContext): Disposable[] {
 
                 for (let i = 0; i < resultSets.length; i++) {
                     const panel = resultEntry.panels[i]!;
+                    const resultSet = resultSets[i];
+
                     panel.webview.postMessage({
-                        type: 'onQueryResult',
-                        rows: Array.from(resultSets[i]),
-                        columns: resultSets[i].columns,
-                        count: resultSets[i].count,
-                        statement: resultSets[i].statement,
-                        return: resultSets[i].return,
-                        parameters: resultSets[i].parameters
+                        type: 'onQueryResultDetails',
+                        columns: resultSet.columns,
+                        count: resultSet.count,
+                        statement: resultSet.statement,
+                        return: resultSet.return,
+                        parameters: resultSet.parameters,
+                        truncated: resultSet.truncated ?? false,
+                        maxRows: ConnectionManager.getMaxResultRows()
                     });
+
+                    const rows = Array.from(resultSet);
+                    for (let j = 0; j < rows.length; j += ROW_BATCH_SIZE) {
+                        panel.webview.postMessage({
+                            type: 'onQueryResultRows',
+                            rows: rows.slice(j, j + ROW_BATCH_SIZE),
+                            count: resultSet.count,
+                            startIndex: j,
+                        });
+                    }
                 }
             } catch (e) {
                 firstPanel.webview.postMessage({

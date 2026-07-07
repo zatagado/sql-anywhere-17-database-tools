@@ -62,6 +62,16 @@ export class ConnectionManager {
         return this.stack.find(dataSource => dataSource.getName() === name);
     }
 
+    static getMaxResultRows(): number {
+        return workspace.getConfiguration('sql-anywhere-17-database-tools.results')
+            .get<number>('maxRows')!;
+    }
+
+    static getQueryTimeout(): number {
+        return workspace.getConfiguration('sql-anywhere-17-database-tools.results')
+            .get<number>('timeout')!;
+    }
+
     private static updateRecentStack(dataSource: DataSource) {
         if (this.stack.some(otherDataSource => 
             otherDataSource.getName() === dataSource.getName() && otherDataSource.getType() === dataSource.getType())) {
@@ -77,10 +87,8 @@ export class ConnectionManager {
         if (updateRecent) {
             this.updateRecentStack(dataSource);
         }
-        return dataSource.getConnection().then(connection =>
-            PreparedStatement.create(connection, query).catch(() =>
-                dataSource.reconnect().then(newConnection => PreparedStatement.create(newConnection, query))
-            )
+        return dataSource.getConnectionWithRetry().then(connection =>
+            PreparedStatement.create(connection, query)
         );
     }
 
@@ -90,25 +98,38 @@ export class ConnectionManager {
             this.updateRecentStack(dataSource);
         }
 
-        const result = dataSource.getConnection().then(connection =>
-            connection.query(query, { multipleResultSets: true }).catch(() =>
-                dataSource.reconnect().then(newConnection => newConnection.query(query, { multipleResultSets: true }))
-            )
-        ).then(raw => (Array.isArray(raw) ? raw : [raw]) as odbc.Result<unknown>[]);
+        const queryOptions: odbc.QueryOptions = {
+            multipleResultSets: true,
+            maxRows: this.getMaxResultRows()
+        };
+        return this.withTimeout(dataSource, dataSource.getConnectionWithRetry().then(connection =>
+            connection.query(query, queryOptions)
+        ).then(raw => raw as odbc.Result<unknown>[]));
+    }
 
-        Promise.race([result, new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Loading')), LOADING_RESPONSE_TIMEOUT_MS))])
-            .catch(err => {
-                if (err instanceof Error && err.message === 'Loading') {
-                    window.withProgress({
-                        location: ProgressLocation.Notification,
-                        title: `${dataSource.getName()} is taking longer than expected to get results...`,
-                    }, () => result);
+    private static withTimeout<T>(
+        dataSource: DataSource, promise: Promise<T>
+    ): Promise<T> {
+        let hasCompleted = false;
+        promise.then(() => hasCompleted = true).catch(() => hasCompleted = true);
+        new Promise((_, reject) => {
+            setTimeout(() => {
+                if (!hasCompleted) {
+                    reject(new Error('Loading'));
                 }
+            }, LOADING_RESPONSE_TIMEOUT_MS);
+        }).catch(err => {
+            if (err instanceof Error && err.message === 'Loading') {
+                window.withProgress({
+                    location: ProgressLocation.Notification,
+                    title: `${dataSource.getName()} is taking longer than expected to get results...`,
+                }, () => promise);
+            }
+            else {
                 throw err;
-            });
-
-        return result;
+            }
+        });
+        return promise;
     }
 
     static executeAll(dataSource: DataSource, query: string, updateRecent: boolean = true): Promise<odbc.Result<unknown>> {
@@ -116,31 +137,18 @@ export class ConnectionManager {
             this.updateRecentStack(dataSource);
         }
 
-        const result = dataSource.getConnection().then(connection =>
-            connection.query(query).catch(() =>
-                dataSource.reconnect().then(newConnection => newConnection.query(query))
-            )
-        );
-
-        Promise.race([result, new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Loading')), LOADING_RESPONSE_TIMEOUT_MS))])
-            .catch(err => {
-                if (err instanceof Error && err.message === 'Loading') {
-                    window.withProgress({
-                        location: ProgressLocation.Notification,
-                        title: `${dataSource.getName()} is taking longer than expected to get results...`,
-                    }, () => result);
-                }
-                throw err;
-            });
-
-        return result;
+        const queryOptions: odbc.QueryOptions = {
+            maxRows: this.getMaxResultRows()
+        };
+        return this.withTimeout(dataSource, dataSource.getConnectionWithRetry().then(connection =>
+            connection.query(query, queryOptions)
+        ));
     }
 }
 
 export class DataSource {
     private static readonly MAX_RECONNECT_ATTEMPTS = 3;
-    private static readonly RECONNECT_DELAY_MS = 1000;
+    private static readonly RECONNECT_DELAY_MS = 500;
 
     private name: string;
     private type: string;
@@ -152,7 +160,10 @@ export class DataSource {
     }
 
     private async getPool(): Promise<odbc.Pool> {
-        this.pool = this.pool ?? odbc.pool(`DSN=${this.name}`);
+        this.pool = this.pool ?? odbc.pool({
+            connectionString: `DSN=${this.name}`,
+            fetchArray: true
+        });
         return this.pool;
     }
 
@@ -169,22 +180,27 @@ export class DataSource {
         return !DataSource.getUsePooling() || this.pool !== undefined;
     }
 
-    async reconnect(): Promise<odbc.Connection> {
-        if (DataSource.getUsePooling()) {
-            this.disposePool();
-        }
+    private getDirectConnection(): Promise<odbc.Connection> {
+        return odbc.connect({
+            connectionString: `DSN=${this.name}`,
+            fetchArray: true
+        });
+    }
 
+    getConnection(): Promise<odbc.Connection> {
+        return DataSource.getUsePooling() ? this.getPool().then(pool => pool.connect()) : this.getDirectConnection();
+    }
+
+    async getConnectionWithRetry(): Promise<odbc.Connection> {
         for (let attempt = 0; attempt < DataSource.MAX_RECONNECT_ATTEMPTS; attempt++) {
-            if (attempt > 0) {
-                await new Promise(resolve => setTimeout(resolve, DataSource.RECONNECT_DELAY_MS));
-            }
             try {
-                return DataSource.getUsePooling() ? this.getPool().then(pool => pool.connect()) : this.getDirectConnection();
+                return this.getConnection();
             } catch (err) {
                 if (DataSource.getUsePooling()) {
                     this.disposePool();
                 }
             }
+            await new Promise(resolve => setTimeout(resolve, DataSource.RECONNECT_DELAY_MS));
         }
 
         throw new Error(`Failed to reconnect to datasource "${this.name}"
@@ -195,14 +211,6 @@ export class DataSource {
         const pool = this.pool;
         this.pool = undefined;
         return pool?.then(pool => pool.close());
-    }
-
-    private getDirectConnection(): Promise<odbc.Connection> {
-        return odbc.connect(`DSN=${this.name}`);
-    }
-
-    getConnection(): Promise<odbc.Connection> {
-        return DataSource.getUsePooling() ? this.getPool().then(pool => pool.connect()) : this.getDirectConnection();
     }
 
     getName() {
@@ -247,17 +255,17 @@ export class PreparedStatement {
         }
 
         return this.statement.bind(Array.from(this.parameters.values()).sort(
-            (a, b) => a.position - b.position).map(parameterData => parameterData.value)).then(
-                () => this.statement.execute().then(
-                    result => {
-                        this.statement.close();
-                        return result;
-                    },
-                    err => {
-                        this.statement.close();
-                        throw err;
-                    }
-                )
+                (a, b) => a.position - b.position).map(parameterData => parameterData.value)).then(
+                    () => this.statement.execute().then(
+                        result => {
+                            this.statement.close();
+                            return result;
+                        },
+                        err => {
+                            this.statement.close();
+                            throw err;
+                        }
+                    )
             );
     }
 }

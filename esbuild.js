@@ -68,9 +68,9 @@ const nativeModulePlugin = {
 			}
 			fs.mkdirSync(path.dirname(dest), { recursive: true });
 			try {
-				fs.unlinkSync(dest);
+				fs.copyFileSync(src, dest);
 			} catch (/** @type {any} */ e) {
-				if (e.code !== 'ENOENT') {
+				if (e.code === 'EPERM' || e.code === 'EBUSY') {
 					const srcStat = fs.statSync(src);
 					try {
 						const destStat = fs.statSync(dest);
@@ -78,11 +78,10 @@ const nativeModulePlugin = {
 							console.log('[native-module] odbc.node is locked but already up to date — skipping copy');
 							return;
 						}
-					} catch { /* dest gone — will copy below */ }
-					throw e;
+					} catch { /* dest missing — rethrow below */ }
 				}
+				throw e;
 			}
-			fs.copyFileSync(src, dest);
 		});
 	},
 };

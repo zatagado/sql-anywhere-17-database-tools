@@ -15,8 +15,8 @@ defineProps<{
     <tr class="contents dummy-body-row" aria-hidden="true">
         <td class="index-cell"><span>0</span></td>
         <td
-            v-for="column in columns"
-            :key="column.name"
+            v-for="(_column, columnIndex) in columns"
+            :key="columnIndex"
             class="dummy-data-cell"
         >
             <span>&nbsp;</span>

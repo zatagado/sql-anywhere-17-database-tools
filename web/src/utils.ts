@@ -1,3 +1,13 @@
+export type ResultRow = (string | number | boolean | null)[];
+
+export type Column = {
+    dataType: number;
+    dataTypeName: string;
+    columnSize: number;
+    decimalDigits: number;
+    nullable: boolean;
+};
+
 export function isNumericSqlDataType(dataType: number): boolean {
     switch (dataType) {
         case 2:  // SQL_NUMERIC
@@ -14,4 +24,72 @@ export function isNumericSqlDataType(dataType: number): boolean {
         default:
             return false;
     }
+}
+
+function formatSizedType(typeName: string, columnSize: number): string {
+    return `${typeName}(${columnSize})`;
+}
+
+function formatPrecisionScaleType(typeName: string, columnSize: number, decimalDigits: number): string {
+    return `${typeName}(${columnSize}, ${decimalDigits})`;
+}
+
+export function formatSqlDataType(column: Column): string {
+    let type: string;
+
+    switch (column.dataType) {
+        case -7: // SQL_BIT
+            type = 'BIT';
+            break;
+        case -6: // SQL_TINYINT
+            type = 'TINYINT';
+            break;
+        case -5: // SQL_BIGINT
+            type = 'BIGINT';
+            break;
+        case -1: // SQL_LONGVARCHAR
+            type = 'LONG VARCHAR';
+            break;
+        case 1: // SQL_CHAR
+            type = 'CHAR';
+            break;
+        case 2: // SQL_NUMERIC
+            type = formatPrecisionScaleType('NUMERIC', column.columnSize, column.decimalDigits);
+            break;
+        case 3: // SQL_DECIMAL
+            type = formatPrecisionScaleType('DECIMAL', column.columnSize, column.decimalDigits);
+            break;
+        case 4: // SQL_INTEGER
+            type = 'INTEGER';
+            break;
+        case 5: // SQL_SMALLINT
+            type = 'SMALLINT';
+            break;
+        case 6: // SQL_FLOAT
+            type = 'FLOAT';
+            break;
+        case 7: // SQL_REAL
+            type = 'REAL';
+            break;
+        case 8: // SQL_DOUBLE
+            type = 'DOUBLE';
+            break;
+        case 12: // SQL_VARCHAR
+            type = formatSizedType('VARCHAR', column.columnSize);
+            break;
+        case 91: // SQL_TYPE_DATE
+            type = 'DATE';
+            break;
+        case 92: // SQL_TYPE_TIME
+            type = 'TIME';
+            break;
+        case 93: // SQL_TYPE_TIMESTAMP
+            type = 'TIMESTAMP';
+            break;
+        default:
+            type = 'UNKNOWN TYPE';
+            break;
+    }
+
+    return type;
 }

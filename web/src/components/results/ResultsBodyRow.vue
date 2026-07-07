@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import ResultsBodyCell from './ResultsBodyCell.vue';
+import type { ResultRow } from '../../utils';
+
 defineProps<{
     rowIndex: number
     columns: {
@@ -11,7 +13,7 @@ defineProps<{
         nullable: boolean,
         sort?: 'asc' | 'desc' | null,
     }[]
-    row: Record<string, string | number | boolean | null>
+    row: ResultRow
 }>()
 
 
@@ -23,10 +25,10 @@ defineProps<{
             <span>{{ rowIndex + 1 }}</span>
         </td>
         <ResultsBodyCell
-            v-for="column in columns"
-            :key="column.name"
+            v-for="(column, columnIndex) in columns"
+            :key="columnIndex"
             :column="column"
-            :value="row[column.name]!"
+            :value="row[columnIndex]!"
         />
         <td class="filler-cell"></td>
     </tr>
