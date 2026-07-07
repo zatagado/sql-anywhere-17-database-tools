@@ -73,7 +73,6 @@ window.addEventListener('message', (event) => {
                     queryResultRows.value, queryResultDetails.value) as QueryResult;
                 loading.value = false;
                 queryError.value = undefined;
-                debugger;
             }
             break;
         }

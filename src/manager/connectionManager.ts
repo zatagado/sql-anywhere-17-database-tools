@@ -148,7 +148,7 @@ export class ConnectionManager {
 
 export class DataSource {
     private static readonly MAX_RECONNECT_ATTEMPTS = 3;
-    private static readonly RECONNECT_DELAY_MS = 1000;
+    private static readonly RECONNECT_DELAY_MS = 500;
 
     private name: string;
     private type: string;

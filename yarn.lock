@@ -3316,8 +3316,8 @@ object.assign@^4.1.7:
     object-keys "^1.1.1"
 
 "odbc@git+https://github.com/zatagado/node-odbc.git#main":
-  version "2.5.0"
-  resolved "git+https://github.com/zatagado/node-odbc.git#ab6c6183bd4898bc226c0acf1d712f79f613be9e"
+  version "2.6.0"
+  resolved "git+https://github.com/zatagado/node-odbc.git#b0f20d2f6507a3b90c7036a2aa4948a6b2b2d5cd"
   dependencies:
     "@mapbox/node-pre-gyp" "^2.0.0"
     async "^3.0.1"

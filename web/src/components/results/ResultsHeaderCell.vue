@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import type { CSSProperties, VNodeRef } from 'vue';
+import { useTemplateRef, type CSSProperties, type VNodeRef } from 'vue';
+import { formatSqlDataType } from '../../utils';
+import Tooltip from './tooltip/Tooltip.vue';
 
 const props = defineProps<{
     element: VNodeRef | undefined,
@@ -17,6 +19,7 @@ const props = defineProps<{
     mouseDown: (index: number) => void,
     resizeHandleStyle: CSSProperties
 }>();
+const tooltipHoverElement = useTemplateRef<HTMLButtonElement>('tooltip-hover');
 
 const emit = defineEmits<{
     sort: [{ column: typeof props.column, index: number }]
@@ -29,7 +32,7 @@ function onSortClick() {
 
 <template>
     <th :ref="element" class="results-header-cell">
-        <button type="button" @click="onSortClick">
+        <button ref="tooltip-hover" type="button" @click="onSortClick">
             <span class="header-label">
                 {{ column.name }}
             </span>
@@ -40,6 +43,7 @@ function onSortClick() {
                     :class="{ desc: column.sort === 'desc' }"
                 />
             </Transition>
+            <Tooltip :hover-element="() => tooltipHoverElement" :text="formatSqlDataType(column)" />
         </button>
         <div
             class="resize-handle"
