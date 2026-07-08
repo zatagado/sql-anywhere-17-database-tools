@@ -1,26 +1,53 @@
 <script setup lang="ts">
 import ResultsTable from './ResultsTable.vue';
 import type { ColumnDefinition, Result } from 'odbc';
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 
 const loading = ref(true);
 const queryError = ref<string>();
 
-type QueryResultDetails = {
-    columns: ColumnDefinition[];
-    count: number;
-    statement: string;
-    return: number;
-    parameters: Array<number | string>;
-    truncated: boolean;
-};
-
 type QueryResult = Result<unknown> & { truncated?: boolean };
 
-const queryResultDetails = ref<QueryResultDetails>();
-const queryResultRows = ref<unknown[]>();
-const queryResultRowsCount = ref<number>(0);
 const queryResult = ref<QueryResult>();
+const activeGeneration = ref(0);
+
+function adoptGeneration(generation: number | undefined): boolean {
+    if (typeof generation !== 'number') {
+        return true;
+    }
+    if (generation < activeGeneration.value) {
+        return false;
+    }
+    activeGeneration.value = generation;
+    return true;
+}
+
+function applyQueryResult(
+    generation: number | undefined,
+    columns: ColumnDefinition[],
+    rows: unknown[],
+    details: {
+        statement: string;
+        return: number;
+        parameters: Array<number | string>;
+        truncated: boolean;
+    }
+) {
+    if (!adoptGeneration(generation)) {
+        return;
+    }
+
+    queryResult.value = Object.assign(rows, {
+        columns,
+        count: rows.length,
+        statement: details.statement,
+        return: details.return,
+        parameters: details.parameters,
+        truncated: details.truncated,
+    }) as QueryResult;
+    loading.value = false;
+    queryError.value = undefined;
+}
 
 const rowCountLabel = computed(() => {
     if (!queryResult.value) {
@@ -33,48 +60,36 @@ const rowCountLabel = computed(() => {
     return queryResult.value.truncated ? `${count}+ ${label}` : `${count} ${label}`;
 });
 
+onMounted(() => {
+    window.__vscodeApi__?.postMessage({ type: 'onWebviewReady' });
+});
+
 window.addEventListener('message', (event) => {
     const message = event.data;
     switch (message.type) {
         case 'onQueryLoading': {
+            if (typeof message.generation !== 'number' || message.generation <= activeGeneration.value) {
+                break;
+            }
+            activeGeneration.value = message.generation;
             loading.value = true;
             queryError.value = undefined;
-            queryResultDetails.value = undefined;
-            queryResultRows.value = undefined;
-            queryResultRowsCount.value = 0;
             queryResult.value = undefined;
             break;
         }
-        case 'onQueryResultDetails': {
-            queryResultDetails.value = Object.assign({}, {
-                columns: message.columns,
-                count: message.count,
+        case 'onQueryResult': {
+            applyQueryResult(message.generation, message.columns ?? [], message.rows ?? [], {
                 statement: message.statement,
                 return: message.return,
                 parameters: message.parameters,
-                truncated: message.truncated ?? false
+                truncated: message.truncated ?? false,
             });
             break;
         }
-        case 'onQueryResultRows': {
-            if (!queryResultRows.value) {
-                queryResultRows.value = new Array<unknown>(message.count);
-            }
-
-            for (let i = 0; i < message.rows.length; i++) {
-                queryResultRows.value[message.startIndex + i] = message.rows[i];
-            }
-            queryResultRowsCount.value += message.rows.length;
-
-            if (queryResultRowsCount.value === message.count) {
-                queryResult.value = Object.assign(
-                    queryResultRows.value, queryResultDetails.value) as QueryResult;
-                loading.value = false;
-                queryError.value = undefined;
-            }
-            break;
-        }
         case 'onQueryError': {
+            if (!adoptGeneration(message.generation)) {
+                break;
+            }
             loading.value = false;
             queryResult.value = undefined;
             queryError.value = message.message as string;

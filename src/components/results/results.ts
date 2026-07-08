@@ -13,35 +13,60 @@ import {
 import { ConnectionManager, DataSource } from '../../manager/connectionManager';
 import { selectDatasource } from '../selection/datasourcePick';
 import { ResultsRest } from '../../rest/results/resultsRest';
-import { NodeOdbcError } from 'odbc';
+import { NodeOdbcError, Result } from 'odbc';
 import { SqlManager } from '../../manager/sqlManager';
-
-const ROW_BATCH_SIZE = 1000000;
 
 function getMaxResultRows(): number {
     return workspace.getConfiguration('sql-anywhere-17-database-tools.results').get<number>('maxRows', 10000);
 }
 
-function waitForWebviewReady(panel: WebviewPanel): Promise<void> {
+function waitForWebviewReady(panel: WebviewPanel, timeoutMs = 10000): Promise<void> {
     return new Promise((resolve, reject) => {
+        let settled = false;
+        const timeout = setTimeout(() => {
+            console.warn('[sql-anywhere-17-database-tools] webview ready timeout, continuing anyway');
+            settle('resolve');
+        }, timeoutMs);
+
+        const settle = (action: 'resolve' | 'reject', error?: Error) => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            clearTimeout(timeout);
+            messageSub.dispose();
+            disposeSub.dispose();
+            if (action === 'resolve') {
+                resolve();
+            } else {
+                reject(error);
+            }
+        };
+
         const messageSub = panel.webview.onDidReceiveMessage((msg: { type?: string }) => {
             if (msg?.type === 'onWebviewReady') {
-                messageSub.dispose();
-                disposeSub.dispose();
-                resolve();
+                settle('resolve');
             }
         });
         const disposeSub = panel.onDidDispose(() => {
-            messageSub.dispose();
-            reject(new Error('Webview was closed before it became ready'));
+            settle('reject', new Error('Webview was closed before it became ready'));
         });
     });
+}
+
+function loadResultsWebview(panel: WebviewPanel, extensionUri: Uri): Promise<void> {
+    const ready = waitForWebviewReady(panel);
+    panel.webview.html = getResultsWebviewHtml(panel, extensionUri);
+    panel.webview.postMessage({ type: 'checkReady' });
+    return ready;
 }
 
 export type ResultsEntry = {
     editor: TextEditor;
     dataSource: DataSource | null;
     panels: WebviewPanel[];
+    queryGeneration: number;
+    pendingQuery?: Promise<void>;
 };
 
 export class Results {
@@ -120,6 +145,17 @@ function formatExecutionError(error: unknown): string {
     return (error as Error).message;
 }
 
+function logResultSet(index: number, resultSet: Result<unknown>, rows: unknown[]) {
+    console.log(`[sql-anywhere-17-database-tools] result set ${index + 1}:`, {
+        statement: resultSet.statement,
+        count: resultSet.count,
+        rowCount: rows.length,
+        truncated: resultSet.truncated ?? false,
+        columns: resultSet.columns.map(column => column.name),
+        rows,
+    });
+}
+
 export function activate(context: ExtensionContext): Disposable[] {
 
     async function resultsView(selectedDataSource: DataSource | null = null) {
@@ -169,14 +205,18 @@ export function activate(context: ExtensionContext): Disposable[] {
             resultEntry = {
                 editor: editor,
                 dataSource: dataSource,
-                panels: []
+                panels: [],
+                queryGeneration: 0,
             };
             Results.map.set(document, resultEntry);
         }
 
         // Need to create at least one panel to indicate we are loading.
         const panelTitle = `${dataSource.getName()} - ${shortName}`;
+        resultEntry.queryGeneration++;
+        const queryGeneration = resultEntry.queryGeneration;
         let createdFirstPanel = false;
+        let firstPanelReady: Promise<void> | undefined;
         if (resultEntry.panels.length === 0) {
             await window.showTextDocument(editor.document, {
                 viewColumn: editor.viewColumn ?? ViewColumn.Active
@@ -204,7 +244,7 @@ export function activate(context: ExtensionContext): Disposable[] {
                     entry.dataSource = null;
                 }
             });
-            panel.webview.html = getResultsWebviewHtml(panel, context.extensionUri);
+            firstPanelReady = loadResultsWebview(panel, context.extensionUri);
             resultEntry.panels.push(panel);
             createdFirstPanel = true;
         }
@@ -220,24 +260,64 @@ export function activate(context: ExtensionContext): Disposable[] {
         const firstPanel = resultEntry.panels[0]!;
         firstPanel.reveal(firstPanel.viewColumn!, false);
 
-        try {
-            if (createdFirstPanel) {
-                await waitForWebviewReady(firstPanel);
-            }
-            firstPanel.webview.postMessage({ type: 'onQueryLoading' });
-        } catch (e) {
-            firstPanel.webview.postMessage({
-                type: 'onQueryError',
-                message: formatExecutionError(e)
-            });
-            return;
-        }
+        const postToPanel = (panel: WebviewPanel, message: object) => {
+            panel.webview.postMessage(message);
+        };
 
-        ResultsRest.executeScript(dataSource, queries, !hadExistingDataSource,
-            { maxRows: getMaxResultRows() }).then(async resultSets => {
+        const runQuery = async () => {
+            if (queryGeneration !== resultEntry!.queryGeneration) {
+                return;
+            }
+
             try {
+                if (createdFirstPanel) {
+                    await firstPanelReady;
+                }
+                if (queryGeneration !== resultEntry!.queryGeneration) {
+                    return;
+                }
+                postToPanel(firstPanel, { type: 'onQueryLoading', generation: queryGeneration });
+            } catch (e) {
+                postToPanel(firstPanel, {
+                    type: 'onQueryError',
+                    generation: queryGeneration,
+                    message: formatExecutionError(e)
+                });
+                return;
+            }
+
+            let resultSets: Result<unknown>[];
+            try {
+                resultSets = await ResultsRest.executeScript(
+                    dataSource!, queries, !hadExistingDataSource, { maxRows: getMaxResultRows() });
+            } catch (err) {
+                if (queryGeneration !== resultEntry!.queryGeneration) {
+                    return;
+                }
+                postToPanel(firstPanel, {
+                    type: 'onQueryError',
+                    generation: queryGeneration,
+                    message: formatExecutionError(err)
+                });
+                return;
+            }
+
+            if (queryGeneration !== resultEntry!.queryGeneration) {
+                return;
+            }
+
+            try {
+                if (!Array.isArray(resultSets)) {
+                    resultSets = [resultSets];
+                }
+
+                console.log(`[sql-anywhere-17-database-tools] ${resultSets.length} result set(s)`);
+
+                const additionalPanelsReady: Promise<void>[] = [];
                 for (let i = 1; i < resultSets.length; i++) {
-                    const panel = window.createWebviewPanel('webview', `${panelTitle} (${i + 1})`,
+                    const panel = window.createWebviewPanel(
+                        `queryResults-${queryGeneration}-${i}`,
+                        `${panelTitle} (${i + 1})`,
                         { viewColumn: firstPanel.viewColumn! },
                         {
                             enableScripts: true,
@@ -259,59 +339,54 @@ export function activate(context: ExtensionContext): Disposable[] {
                             entry.dataSource = null;
                         }
                     });
-                    panel.webview.html = getResultsWebviewHtml(panel, context.extensionUri);
-                    resultEntry.panels.push(panel);
+                    additionalPanelsReady.push(loadResultsWebview(panel, context.extensionUri));
+                    resultEntry!.panels.push(panel);
                 }
 
-                await Promise.all(resultEntry.panels.slice(1).map(loadingPanel => waitForWebviewReady(loadingPanel)));
+                await Promise.all(additionalPanelsReady);
+
+                if (queryGeneration !== resultEntry!.queryGeneration) {
+                    return;
+                }
 
                 firstPanel.reveal(firstPanel.viewColumn ?? ViewColumn.Active, false);
 
                 for (let i = 0; i < resultSets.length; i++) {
-                    const panel = resultEntry.panels[i]!;
+                    const panel = resultEntry!.panels[i];
                     const resultSet = resultSets[i];
+                    if (!panel || !resultSet) {
+                        console.warn(`[sql-anywhere-17-database-tools] missing panel or result set at index ${i}`);
+                        continue;
+                    }
 
-                    panel.webview.postMessage({
-                        type: 'onQueryResultDetails',
-                        columns: resultSet.columns,
-                        count: resultSet.count,
+                    const rows = Array.from(resultSet);
+                    logResultSet(i, resultSet, rows);
+
+                    postToPanel(panel, { type: 'onQueryLoading', generation: queryGeneration });
+                    postToPanel(panel, {
+                        type: 'onQueryResult',
+                        generation: queryGeneration,
+                        columns: resultSet.columns ?? [],
+                        rows,
                         statement: resultSet.statement,
                         return: resultSet.return,
                         parameters: resultSet.parameters,
                         truncated: resultSet.truncated ?? false
                     });
-
-                    const rows = Array.from(resultSet);
-                    if (rows.length === 0) {
-                        panel.webview.postMessage({
-                            type: 'onQueryResultRows',
-                            rows: [],
-                            count: resultSet.count,
-                            startIndex: 0,
-                        });
-                    } else {
-                        for (let j = 0; j < rows.length; j += ROW_BATCH_SIZE) {
-                            panel.webview.postMessage({
-                                type: 'onQueryResultRows',
-                                rows: rows.slice(j, j + ROW_BATCH_SIZE),
-                                count: resultSet.count,
-                                startIndex: j,
-                            });
-                        }
-                    }
                 }
             } catch (e) {
-                firstPanel.webview.postMessage({
+                if (queryGeneration !== resultEntry!.queryGeneration) {
+                    return;
+                }
+                postToPanel(firstPanel, {
                     type: 'onQueryError',
+                    generation: queryGeneration,
                     message: formatExecutionError(e)
                 });
             }
-        }, err => {
-            firstPanel.webview.postMessage({
-                type: 'onQueryError',
-                message: formatExecutionError(err)
-            });
-        });
+        };
+
+        resultEntry.pendingQuery = (resultEntry.pendingQuery ?? Promise.resolve()).then(runQuery);
     }
 
     async function execute(dataSource?: DataSource) {
