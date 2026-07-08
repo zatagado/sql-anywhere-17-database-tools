@@ -9,8 +9,6 @@ app.use(createPinia())
 
 app.mount('#app')
 
-window.__vscodeApi__?.postMessage({ type: 'onWebviewReady' })
-
 window.addEventListener('message', (event) => {
   if (event.data?.type === 'checkReady') {
     window.__vscodeApi__?.postMessage({ type: 'onWebviewReady' })
