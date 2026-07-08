@@ -169,9 +169,9 @@ export class TypesItem extends DatabaseTreeItem {
             case DatabaseObjectType.Table: {
                 const rows = await DatabaseTreeRest.getTables(this.parentNode.dataSource);
                 return rows.map((row => {
-                    const table = row as { TableName: string };
+                    const tableName = (row as unknown[])[0] as string;
                     return new ObjectItem(
-                        table.TableName,
+                        tableName,
                         TreeItemCollapsibleState.None,
                         {
                             light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'table.svg'),
@@ -188,9 +188,9 @@ export class TypesItem extends DatabaseTreeItem {
             case DatabaseObjectType.View: {
                 const rows = await DatabaseTreeRest.getViews(this.parentNode.dataSource);
                 return rows.map((row => {
-                    const view = row as { ViewName: string };
+                    const viewName = (row as unknown[])[0] as string;
                     return new ObjectItem(
-                        view.ViewName,
+                        viewName,
                         TreeItemCollapsibleState.None,
                         {
                             light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'view.svg'),
@@ -207,9 +207,9 @@ export class TypesItem extends DatabaseTreeItem {
             case DatabaseObjectType.Procedure: {
                 const rows = await DatabaseTreeRest.getProcedures(this.parentNode.dataSource);
                 return rows.map((row => {
-                    const procedure = row as { ProcedureName: string };
+                    const procedureName = (row as unknown[])[0] as string;
                     return new ObjectItem(
-                        procedure.ProcedureName,
+                        procedureName,
                         TreeItemCollapsibleState.None,
                         {
                             light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'procedure.svg'),

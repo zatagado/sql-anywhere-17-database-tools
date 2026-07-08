@@ -57,7 +57,7 @@ export function activate(): Disposable[] {
             // Get the view name without the .sql extension
             const viewName = parts[1].substring(0, parts[1].length - 4);
             return DatabaseObjectViewRest.getView(ConnectionManager.getDataSource(databaseName)!, viewName).then(
-                result => result[0] as { ViewDefinition: string }).then(view => view.ViewDefinition);
+                result => (result[0] as unknown[])[0] as string);
         }
     }
 
@@ -71,13 +71,15 @@ export function activate(): Disposable[] {
             const parts = uri.path.split('/');
             const databaseName = parts[0];
             const procedureName = parts[1].substring(0, parts[1].length - 4);
-            const procedure = (await DatabaseObjectViewRest.getProcedure(ConnectionManager.getDataSource(databaseName)!, procedureName))[0] as { ProcedureDefinition: string };
-            return procedure.ProcedureDefinition;
+            const procedureRow = (await DatabaseObjectViewRest.getProcedure(
+                ConnectionManager.getDataSource(databaseName)!, procedureName))[0] as unknown[];
+            return procedureRow[0] as string;
         }
     }
 
     const subscriptions: Disposable[] = [];
     subscriptions.push(workspace.registerTextDocumentContentProvider(ViewProvider.scheme, new ViewProvider()));
-    subscriptions.push(workspace.registerTextDocumentContentProvider(ProcedureProvider.scheme, new ProcedureProvider()));
+    subscriptions.push(workspace.registerTextDocumentContentProvider(
+        ProcedureProvider.scheme, new ProcedureProvider()));
     return subscriptions;
 }

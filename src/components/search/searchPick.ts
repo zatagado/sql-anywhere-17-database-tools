@@ -34,7 +34,7 @@ async function loadObjectItems(dataSource: DataSource): Promise<SearchObjectItem
     const items: SearchObjectItem[] = [];
 
     for (const row of tablesResult) {
-        const name = String((row as Record<string, unknown>).TableName ?? '');
+        const name = String((row as unknown[])[0] ?? '');
         if (name.length > 0) {
             items.push({
                 label: name,
@@ -46,7 +46,7 @@ async function loadObjectItems(dataSource: DataSource): Promise<SearchObjectItem
     }
 
     for (const row of viewsResult) {
-        const name = String((row as Record<string, unknown>).ViewName ?? '');
+        const name = String((row as unknown[])[0] ?? '');
         if (name.length > 0) {
             items.push({
                 label: name,
@@ -58,7 +58,7 @@ async function loadObjectItems(dataSource: DataSource): Promise<SearchObjectItem
     }
 
     for (const row of proceduresResult) {
-        const name = String((row as Record<string, unknown>).ProcedureName ?? '');
+        const name = String((row as unknown[])[0] ?? '');
         if (name.length > 0) {
             items.push({
                 label: name,

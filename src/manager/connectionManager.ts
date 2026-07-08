@@ -62,14 +62,9 @@ export class ConnectionManager {
         return this.stack.find(dataSource => dataSource.getName() === name);
     }
 
-    static getMaxResultRows(): number {
-        return workspace.getConfiguration('sql-anywhere-17-database-tools.results')
-            .get<number>('maxRows')!;
-    }
-
     static getQueryTimeout(): number {
         return workspace.getConfiguration('sql-anywhere-17-database-tools.results')
-            .get<number>('timeout')!;
+            .get<number>('timeout', 15);
     }
 
     private static updateRecentStack(dataSource: DataSource) {
@@ -93,17 +88,13 @@ export class ConnectionManager {
     }
 
     static execute(dataSource: DataSource, query: string,
-        updateRecent: boolean = true): Promise<odbc.Result<unknown>[]> {
+        updateRecent: boolean = true, queryOptions: odbc.QueryOptions = {}): Promise<odbc.Result<unknown>[]> {
         if (updateRecent) {
             this.updateRecentStack(dataSource);
         }
 
-        const queryOptions: odbc.QueryOptions = {
-            multipleResultSets: true,
-            maxRows: this.getMaxResultRows()
-        };
         return this.withTimeout(dataSource, dataSource.getConnectionWithRetry().then(connection =>
-            connection.query(query, queryOptions)
+            connection.query(query, { multipleResultSets: true, ...queryOptions })
         ).then(raw => raw as odbc.Result<unknown>[]));
     }
 
@@ -137,12 +128,8 @@ export class ConnectionManager {
             this.updateRecentStack(dataSource);
         }
 
-        const queryOptions: odbc.QueryOptions = {
-            maxRows: this.getMaxResultRows()
-        };
         return this.withTimeout(dataSource, dataSource.getConnectionWithRetry().then(connection =>
-            connection.query(query, queryOptions)
-        ));
+            connection.query(query)));
     }
 }
 

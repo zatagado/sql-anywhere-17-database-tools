@@ -18,6 +18,10 @@ import { SqlManager } from '../../manager/sqlManager';
 
 const ROW_BATCH_SIZE = 1000000;
 
+function getMaxResultRows(): number {
+    return workspace.getConfiguration('sql-anywhere-17-database-tools.results').get<number>('maxRows', 10000);
+}
+
 function waitForWebviewReady(panel: WebviewPanel): Promise<void> {
     return new Promise((resolve, reject) => {
         const messageSub = panel.webview.onDidReceiveMessage((msg: { type?: string }) => {
@@ -229,7 +233,8 @@ export function activate(context: ExtensionContext): Disposable[] {
             return;
         }
 
-        ResultsRest.executeScript(dataSource, queries, !hadExistingDataSource).then(async resultSets => {
+        ResultsRest.executeScript(dataSource, queries, !hadExistingDataSource,
+            { maxRows: getMaxResultRows() }).then(async resultSets => {
             try {
                 for (let i = 1; i < resultSets.length; i++) {
                     const panel = window.createWebviewPanel('webview', `${panelTitle} (${i + 1})`,
@@ -273,18 +278,26 @@ export function activate(context: ExtensionContext): Disposable[] {
                         statement: resultSet.statement,
                         return: resultSet.return,
                         parameters: resultSet.parameters,
-                        truncated: resultSet.truncated ?? false,
-                        maxRows: ConnectionManager.getMaxResultRows()
+                        truncated: resultSet.truncated ?? false
                     });
 
                     const rows = Array.from(resultSet);
-                    for (let j = 0; j < rows.length; j += ROW_BATCH_SIZE) {
+                    if (rows.length === 0) {
                         panel.webview.postMessage({
                             type: 'onQueryResultRows',
-                            rows: rows.slice(j, j + ROW_BATCH_SIZE),
+                            rows: [],
                             count: resultSet.count,
-                            startIndex: j,
+                            startIndex: 0,
                         });
+                    } else {
+                        for (let j = 0; j < rows.length; j += ROW_BATCH_SIZE) {
+                            panel.webview.postMessage({
+                                type: 'onQueryResultRows',
+                                rows: rows.slice(j, j + ROW_BATCH_SIZE),
+                                count: resultSet.count,
+                                startIndex: j,
+                            });
+                        }
                     }
                 }
             } catch (e) {
