@@ -13,7 +13,6 @@ type QueryResultDetails = {
     return: number;
     parameters: Array<number | string>;
     truncated: boolean;
-    maxRows: number;
 };
 
 type QueryResult = Result<unknown> & { truncated?: boolean };
@@ -53,8 +52,7 @@ window.addEventListener('message', (event) => {
                 statement: message.statement,
                 return: message.return,
                 parameters: message.parameters,
-                truncated: message.truncated ?? false,
-                maxRows: message.maxRows
+                truncated: message.truncated ?? false
             });
             break;
         }
