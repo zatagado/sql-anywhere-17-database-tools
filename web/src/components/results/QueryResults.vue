@@ -21,6 +21,26 @@ const queryResultDetails = ref<QueryResultDetails>();
 const queryResultRows = ref<unknown[]>();
 const queryResultRowsCount = ref<number>(0);
 const queryResult = ref<QueryResult>();
+const activeGeneration = ref(0);
+
+function isCurrentGeneration(generation: number | undefined): boolean {
+    return generation === activeGeneration.value;
+}
+
+function tryCompleteQueryResult() {
+    if (!queryResultDetails.value || !queryResultRows.value) {
+        return;
+    }
+
+    if (queryResultRowsCount.value !== queryResultDetails.value.count) {
+        return;
+    }
+
+    queryResult.value = Object.assign(
+        queryResultRows.value, queryResultDetails.value) as QueryResult;
+    loading.value = false;
+    queryError.value = undefined;
+}
 
 const rowCountLabel = computed(() => {
     if (!queryResult.value) {
@@ -37,6 +57,10 @@ window.addEventListener('message', (event) => {
     const message = event.data;
     switch (message.type) {
         case 'onQueryLoading': {
+            if (typeof message.generation !== 'number' || message.generation <= activeGeneration.value) {
+                break;
+            }
+            activeGeneration.value = message.generation;
             loading.value = true;
             queryError.value = undefined;
             queryResultDetails.value = undefined;
@@ -46,6 +70,11 @@ window.addEventListener('message', (event) => {
             break;
         }
         case 'onQueryResultDetails': {
+            if (!isCurrentGeneration(message.generation)) {
+                break;
+            }
+            queryResultRows.value = undefined;
+            queryResultRowsCount.value = 0;
             queryResultDetails.value = Object.assign({}, {
                 columns: message.columns,
                 count: message.count,
@@ -54,9 +83,14 @@ window.addEventListener('message', (event) => {
                 parameters: message.parameters,
                 truncated: message.truncated ?? false
             });
+            tryCompleteQueryResult();
             break;
         }
         case 'onQueryResultRows': {
+            if (!isCurrentGeneration(message.generation)) {
+                break;
+            }
+
             if (!queryResultRows.value) {
                 queryResultRows.value = new Array<unknown>(message.count);
             }
@@ -65,16 +99,13 @@ window.addEventListener('message', (event) => {
                 queryResultRows.value[message.startIndex + i] = message.rows[i];
             }
             queryResultRowsCount.value += message.rows.length;
-
-            if (queryResultRowsCount.value === message.count) {
-                queryResult.value = Object.assign(
-                    queryResultRows.value, queryResultDetails.value) as QueryResult;
-                loading.value = false;
-                queryError.value = undefined;
-            }
+            tryCompleteQueryResult();
             break;
         }
         case 'onQueryError': {
+            if (!isCurrentGeneration(message.generation)) {
+                break;
+            }
             loading.value = false;
             queryResult.value = undefined;
             queryError.value = message.message as string;
