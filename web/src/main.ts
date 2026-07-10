@@ -9,4 +9,5 @@ app.use(createPinia())
 
 app.mount('#app')
 
+await new Promise(resolve => setTimeout(resolve, 100));
 window.__vscodeApi__?.postMessage({ type: 'onWebviewReady' })
