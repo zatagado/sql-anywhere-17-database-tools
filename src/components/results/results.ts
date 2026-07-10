@@ -13,7 +13,7 @@ import {
 import { ConnectionManager, DataSource } from '../../manager/connectionManager';
 import { selectDatasource } from '../selection/datasourcePick';
 import { ResultsRest } from '../../rest/results/resultsRest';
-import { NodeOdbcError } from 'odbc';
+import odbc, { NodeOdbcError } from 'odbc';
 import { SqlManager } from '../../manager/sqlManager';
 
 const ROW_BATCH_SIZE = 1000000;
@@ -123,7 +123,6 @@ function formatExecutionError(error: unknown): string {
 export function activate(context: ExtensionContext): Disposable[] {
 
     async function resultsView(selectedDataSource: DataSource | null = null) {
-        // TODO depending on the number of queries, create multiple panels
         const editor = window.activeTextEditor;
         if (!editor) {
             return;
@@ -136,7 +135,6 @@ export function activate(context: ExtensionContext): Disposable[] {
 
         const file = Uri.file(document.fileName);
         const shortName = file.path.split('/').pop()!;
-        // TODO get the short name. if it already exists, change both panel titles to the workspace relative path.
         const queries: string = document.getText(editor.selection.isEmpty ? undefined : editor.selection);
 
         let resultEntry: ResultsEntry | undefined = Results.map.get(document);
@@ -162,7 +160,7 @@ export function activate(context: ExtensionContext): Disposable[] {
                     return;
                 }
                 Results.map.delete(document);
-                onThisSqlDocumentClosed.dispose(); // TODO does this dispose for just the one document, or all of them?
+                onThisSqlDocumentClosed.dispose();
             });
             context.subscriptions.push(onThisSqlDocumentClosed);
 
@@ -235,19 +233,96 @@ export function activate(context: ExtensionContext): Disposable[] {
 
         ResultsRest.executeScript(dataSource, queries, !hadExistingDataSource,
             { maxRows: getMaxResultRows() }).then(async resultSets => {
+
+            function createResultPanel(index: number): WebviewPanel {
+                const panel = window.createWebviewPanel('webview', `${panelTitle} (${index + 1})`,
+                    { viewColumn: firstPanel.viewColumn! },
+                    {
+                        enableScripts: true,
+                        retainContextWhenHidden: true
+                    }
+                );
+                panel.iconPath = {
+                    light: Uri.joinPath(context.extensionUri, 'resources', 'light', 'result-set.svg'),
+                    dark: Uri.joinPath(context.extensionUri, 'resources', 'dark', 'result-set.svg')
+                };
+                panel.webview.html = getResultsWebviewHtml(panel, context.extensionUri);
+                return panel;
+            }
+            
+            function postResultSet(panel: WebviewPanel, resultSet: odbc.Result<unknown>) {
+                const rows = Array.from(resultSet);
+                panel.webview.postMessage({
+                    type: 'onQueryResultDetails',
+                    columns: resultSet.columns,
+                    count: rows.length,
+                    statement: resultSet.statement,
+                    return: resultSet.return,
+                    parameters: resultSet.parameters,
+                    truncated: resultSet.truncated ?? false
+                });
+            
+                if (rows.length === 0) {
+                    panel.webview.postMessage({
+                        type: 'onQueryResultRows',
+                        rows: [],
+                        count: rows.length,
+                        startIndex: 0,
+                    });
+                } else {
+                    for (let j = 0; j < rows.length; j += ROW_BATCH_SIZE) {
+                        panel.webview.postMessage({
+                            type: 'onQueryResultRows',
+                            rows: rows.slice(j, j + ROW_BATCH_SIZE),
+                            count: rows.length,
+                            startIndex: j,
+                        });
+                    }
+                }
+            }
+
             try {
+                postResultSet(firstPanel, resultSets[0]);
                 for (let i = 1; i < resultSets.length; i++) {
-                    const panel = window.createWebviewPanel('webview', `${panelTitle} (${i + 1})`,
-                        { viewColumn: firstPanel.viewColumn! },
-                        {
-                            enableScripts: true,
-                            retainContextWhenHidden: true
+                    const panel = createResultPanel(i);
+                    const resultSet = resultSets[i];
+                    let ready = false;
+
+                    panel.onDidChangeViewState(e => {
+                        const panel = e.webviewPanel;
+                        if (!panel.visible || ready) {
+                            return;
                         }
-                    );
-                    panel.iconPath = {
-                        light: Uri.joinPath(context.extensionUri, 'resources', 'light', 'result-set.svg'),
-                        dark: Uri.joinPath(context.extensionUri, 'resources', 'dark', 'result-set.svg')
-                    };
+                        resultEntry.panels.splice(i, 1);
+                        panel.dispose();
+
+                        const reloadedPanel = createResultPanel(i);
+                        reloadedPanel.webview.onDidReceiveMessage((msg: { type?: string }) => {
+                            if (msg?.type === 'onWebviewReady') {
+                                postResultSet(reloadedPanel, resultSet);
+                            }
+                        });
+
+                        reloadedPanel.onDidDispose(() => {
+                            const entry = Results.map.get(document);
+                            if (!entry) {
+                                return;
+                            }
+                            entry.panels = entry.panels.filter(mapPanel => mapPanel !== reloadedPanel);
+                            if (entry.panels.length === 0) {
+                                entry.dataSource = null;
+                            }
+                        });
+
+                        resultEntry.panels.splice(i, 0, reloadedPanel);
+                    });
+
+                    panel.webview.onDidReceiveMessage((msg: { type?: string }) => {
+                        if (msg?.type === 'onWebviewReady') {
+                            postResultSet(panel, resultSet);
+                            ready = true;
+                        }
+                    });
 
                     panel.onDidDispose(() => {
                         const entry = Results.map.get(document);
@@ -259,47 +334,11 @@ export function activate(context: ExtensionContext): Disposable[] {
                             entry.dataSource = null;
                         }
                     });
-                    panel.webview.html = getResultsWebviewHtml(panel, context.extensionUri);
+
                     resultEntry.panels.push(panel);
                 }
 
-                await Promise.all(resultEntry.panels.slice(1).map(loadingPanel => waitForWebviewReady(loadingPanel)));
-
                 firstPanel.reveal(firstPanel.viewColumn ?? ViewColumn.Active, false);
-
-                for (let i = 0; i < resultSets.length; i++) {
-                    const panel = resultEntry.panels[i]!;
-                    const resultSet = resultSets[i];
-
-                    panel.webview.postMessage({
-                        type: 'onQueryResultDetails',
-                        columns: resultSet.columns,
-                        count: resultSet.count,
-                        statement: resultSet.statement,
-                        return: resultSet.return,
-                        parameters: resultSet.parameters,
-                        truncated: resultSet.truncated ?? false
-                    });
-
-                    const rows = Array.from(resultSet);
-                    if (rows.length === 0) {
-                        panel.webview.postMessage({
-                            type: 'onQueryResultRows',
-                            rows: [],
-                            count: resultSet.count,
-                            startIndex: 0,
-                        });
-                    } else {
-                        for (let j = 0; j < rows.length; j += ROW_BATCH_SIZE) {
-                            panel.webview.postMessage({
-                                type: 'onQueryResultRows',
-                                rows: rows.slice(j, j + ROW_BATCH_SIZE),
-                                count: resultSet.count,
-                                startIndex: j,
-                            });
-                        }
-                    }
-                }
             } catch (e) {
                 firstPanel.webview.postMessage({
                     type: 'onQueryError',
