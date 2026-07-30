@@ -20,5 +20,19 @@
     },
     "results": {
         "selectFromObject": "SELECT * FROM $objectName;"
+    },
+    "details": {
+        "table": {
+            "columns": "SELECT column_name, data_type, character_maximum_length, is_nullable, column_default FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = SUBSTRING_INDEX($objectName, '.', -1) ORDER BY ordinal_position;",
+            "constraints": "SELECT tc.constraint_name AS Name, tc.constraint_type AS ConstraintType, CASE WHEN tc.constraint_type IN ('PRIMARY KEY', 'UNIQUE') THEN 'Yes' ELSE 'No' END AS `Unique`, GROUP_CONCAT(kcu.column_name ORDER BY kcu.ordinal_position SEPARATOR ', ') AS `Columns` FROM information_schema.table_constraints AS tc LEFT JOIN information_schema.key_column_usage AS kcu ON tc.constraint_schema = kcu.constraint_schema AND tc.table_name = kcu.table_name AND tc.constraint_name = kcu.constraint_name WHERE tc.constraint_schema = DATABASE() AND tc.table_name = SUBSTRING_INDEX($objectName, '.', -1) GROUP BY tc.constraint_name, tc.constraint_type ORDER BY tc.constraint_type, tc.constraint_name;",
+            "privileges": "SELECT grantee, grantor, privilege_type, is_grantable FROM information_schema.table_privileges WHERE table_schema = DATABASE() AND table_name = SUBSTRING_INDEX($objectName, '.', -1);"
+        },
+        "view": {
+            "columns": "SELECT column_name, data_type, character_maximum_length, is_nullable, column_default FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = SUBSTRING_INDEX($objectName, '.', -1) ORDER BY ordinal_position;",
+            "privileges": "SELECT grantee, grantor, privilege_type, is_grantable FROM information_schema.table_privileges WHERE table_schema = DATABASE() AND table_name = SUBSTRING_INDEX($objectName, '.', -1);"
+        },
+        "procedure": {
+            "privileges": "SELECT grantee, grantor, privilege_type, is_grantable FROM information_schema.routine_privileges WHERE routine_schema = DATABASE() AND routine_name = SUBSTRING_INDEX($objectName, '.', -1);"
+        }
     }
 }

@@ -1,5 +1,5 @@
 import * as odbc from 'odbc';
-import { ExtensionContext, ProgressLocation, window, workspace } from 'vscode';
+import { CancellationError, CancellationToken, CancellationTokenSource, Disposable, ExtensionContext, ProgressLocation, window, workspace } from 'vscode';
 
 const LOADING_RESPONSE_TIMEOUT_MS = 5000;
 
@@ -58,13 +58,12 @@ export class ConnectionManager {
         return this.stack;
     }
 
-    static getDataSource(name: string): DataSource | undefined {
-        return this.stack.find(dataSource => dataSource.getName() === name);
-    }
-
-    static getQueryTimeout(): number {
-        return workspace.getConfiguration('sql-anywhere-17-database-tools.results')
-            .get<number>('timeout', 15);
+    static getDataSource(name: string, updateRecent: boolean = false): DataSource | undefined {
+        const dataSource = this.stack.find(dataSource => dataSource.getName() === name);
+        if (dataSource && updateRecent) {
+            this.updateRecentStack(dataSource);
+        }
+        return dataSource;
     }
 
     private static updateRecentStack(dataSource: DataSource) {
@@ -87,55 +86,139 @@ export class ConnectionManager {
         );
     }
 
-    static execute(dataSource: DataSource, query: string,
-        updateRecent: boolean = true, queryOptions: odbc.QueryOptions = {}): Promise<odbc.Result<unknown>[]> {
-        if (updateRecent) {
-            this.updateRecentStack(dataSource);
-        }
-
-        return this.withTimeout(dataSource, dataSource.getConnectionWithRetry().then(connection =>
-            connection.query(query, { multipleResultSets: true, ...queryOptions })
-        ).then(raw => raw as odbc.Result<unknown>[]));
+    static getQueryTimeout(): number {
+        return workspace.getConfiguration('sql-anywhere-17-database-tools.results')
+            .get<number>('timeout', 15);
     }
 
     private static withTimeout<T>(
-        dataSource: DataSource, promise: Promise<T>
-    ): Promise<T> {
-        let hasCompleted = false;
-        promise.then(() => hasCompleted = true).catch(() => hasCompleted = true);
-        new Promise((_, reject) => {
+        dataSource: DataSource, promise: Promise<T>, cancellationTokenSource: CancellationTokenSource
+    ) : Promise<T> {
+        promise.finally(() => {
+            if (!cancellationTokenSource.token.isCancellationRequested) {
+                cancellationTokenSource.cancel();
+            }
+        });
+
+        const racePromise = Promise.race([
+            promise,
+            new Promise<never>((_, reject) => {
+                if (cancellationTokenSource.token.isCancellationRequested) {
+                    reject(new Error(`${dataSource.getName()} could not get results because the user canceled the request.`));
+                }
+                cancellationTokenSource.token.onCancellationRequested(() => {
+                    reject(new Error(`${dataSource.getName()} could not get results because the user canceled the request.`));
+                });
+            }),
+            new Promise<T>((_, reject) => {
+                setTimeout(() => {
+                    if (!cancellationTokenSource.token.isCancellationRequested) {
+                        reject(new Error(`${dataSource.getName()} could not get results because the request timed out.`));
+                        cancellationTokenSource.cancel();
+                    }
+                }, this.getQueryTimeout() * 1000);
+            })
+        ]);
+
+        return racePromise;
+    }
+
+    private static withWaitingForLong<T>(
+        dataSource: DataSource, promise: Promise<T>, cancellationTokenSource: CancellationTokenSource
+    ) : Promise<T> {
+        // Show with progress after so long
+        new Promise<void>((_, reject) => {
             setTimeout(() => {
-                if (!hasCompleted) {
-                    reject(new Error('Loading'));
+                if (!cancellationTokenSource.token.isCancellationRequested) {
+                    reject(new Error('loading'));
                 }
             }, LOADING_RESPONSE_TIMEOUT_MS);
         }).catch(err => {
-            if (err instanceof Error && err.message === 'Loading') {
+            if (err instanceof Error && err.message === 'loading') {
                 window.withProgress({
                     location: ProgressLocation.Notification,
                     title: `${dataSource.getName()} is taking longer than expected to get results...`,
-                }, () => promise);
+                    cancellable: true
+                },
+                (_, token: CancellationToken) => {
+                    token.onCancellationRequested(() => {
+                        cancellationTokenSource.cancel();
+                    });
+                    return promise;
+                });
             }
             else {
                 throw err;
             }
         });
+
         return promise;
     }
 
-    static executeAll(dataSource: DataSource, query: string, updateRecent: boolean = true): Promise<odbc.Result<unknown>> {
+    static execute(dataSource: DataSource, query: string,
+        updateRecent: boolean = true, queryOptions: odbc.QueryOptions = {}, cancellationTokenSource: CancellationTokenSource = new CancellationTokenSource()): Promise<odbc.Result<unknown>[]> {
         if (updateRecent) {
             this.updateRecentStack(dataSource);
         }
 
-        return this.withTimeout(dataSource, dataSource.getConnectionWithRetry().then(connection =>
-            connection.query(query)));
+        return this.withWaitingForLong(
+            dataSource,
+            dataSource.getConnectionWithRetry().then(connection => this.withTimeout(
+                dataSource,
+                connection.query(query, { multipleResultSets: true, ...queryOptions })
+                    .then(results => results as odbc.Result<unknown>[])
+                    .catch(error => {
+                        if (error.odbcErrors[0].state === 'HY000') {
+                            dataSource.disconnect();
+                            return dataSource.getConnectionWithRetry().then(reconnection =>
+                                reconnection.query(query, { multipleResultSets: true, ...queryOptions })
+                                    .then(results => results as odbc.Result<unknown>[])
+                                    .finally(() => reconnection.close()));
+                        }
+                        throw error;
+                    }).finally(() => {
+                        connection.close();
+                    }),
+                cancellationTokenSource
+            )),
+            cancellationTokenSource
+        );
+    }
+
+    /**
+     * Queries that don't need to limit results, like the tree
+     */
+    static async executeAll(dataSource: DataSource, query: string, updateRecent: boolean = true): Promise<odbc.Result<unknown>> {
+        if (updateRecent) {
+            this.updateRecentStack(dataSource);
+        }
+
+        const cancellationTokenSource = new CancellationTokenSource();
+        return this.withWaitingForLong(
+            dataSource,
+            dataSource.getConnectionWithRetry().then(connection => this.withTimeout(
+                dataSource,
+                connection.query(query)
+                    .catch(error => {
+                        if (error.odbcErrors[0].state === 'HY000') {
+                            dataSource.disconnect();
+                            return dataSource.getConnectionWithRetry().then(reconnection =>
+                                reconnection.query(query).finally(() => reconnection.close()));
+                        }
+                        throw error;
+                    }).finally(() => {
+                        connection.close();
+                    }),
+                cancellationTokenSource
+            )),
+            cancellationTokenSource
+        );
     }
 }
 
 export class DataSource {
     private static readonly MAX_RECONNECT_ATTEMPTS = 3;
-    private static readonly RECONNECT_DELAY_MS = 500;
+    private static readonly RECONNECT_DELAY_MS = 2000;
 
     private name: string;
     private type: string;
@@ -175,14 +258,16 @@ export class DataSource {
     }
 
     getConnection(): Promise<odbc.Connection> {
-        return DataSource.getUsePooling() ? this.getPool().then(pool => pool.connect()) : this.getDirectConnection();
+        return DataSource.getUsePooling() ? this.getPool().then(pool => pool.connect().catch(() => { throw new Error(); }))
+            .catch(() => { throw new Error(); }) : this.getDirectConnection();
     }
 
     async getConnectionWithRetry(): Promise<odbc.Connection> {
         for (let attempt = 0; attempt < DataSource.MAX_RECONNECT_ATTEMPTS; attempt++) {
             try {
-                return this.getConnection();
-            } catch (err) {
+                // May need a special timeout for when this takes too long
+                return await this.getConnection().catch(() => { throw new Error(); });
+            } catch (error) {
                 if (DataSource.getUsePooling()) {
                     this.disposePool();
                 }
@@ -190,8 +275,8 @@ export class DataSource {
             await new Promise(resolve => setTimeout(resolve, DataSource.RECONNECT_DELAY_MS));
         }
 
-        throw new Error(`Failed to reconnect to datasource "${this.name}"
-            after ${DataSource.MAX_RECONNECT_ATTEMPTS} attempts`);
+        throw new Error(`Failed to reconnect to datasource ${this.name} ` +
+            `after ${DataSource.MAX_RECONNECT_ATTEMPTS} attempts.`);
     }
 
     disconnect(): Promise<void> | undefined {
@@ -212,18 +297,20 @@ export class DataSource {
 export class PreparedStatement {
     private statement: odbc.Statement;
     private parameters: Map<string, { position: number, value: any }>;
+    private connection: odbc.Connection;
 
-    constructor(statement: odbc.Statement, query: string) {
+    constructor(statement: odbc.Statement, query: string, connection: odbc.Connection) {
         this.statement = statement;
         this.parameters = new Map<string, { position: number, value: any }>();
         query.match(/(?<=\$)\w+/gm)?.forEach(parameter => {
             this.parameters.set(parameter, { position: this.parameters.size + 1, value: undefined });
         });
+        this.connection = connection;
     }
 
     static create(connection: odbc.Connection, query: string): Promise<PreparedStatement> {
         return connection.createStatement().then(statement => {
-            const preparedStatement = new PreparedStatement(statement, query);
+            const preparedStatement = new PreparedStatement(statement, query, connection);
             return preparedStatement.statement.prepare(query.replace(/\$\w+/gm, '?')).then(() => preparedStatement);
         });
     }
@@ -242,17 +329,19 @@ export class PreparedStatement {
         }
 
         return this.statement.bind(Array.from(this.parameters.values()).sort(
-                (a, b) => a.position - b.position).map(parameterData => parameterData.value)).then(
-                    () => this.statement.execute().then(
-                        result => {
-                            this.statement.close();
-                            return result;
-                        },
-                        err => {
-                            this.statement.close();
-                            throw err;
-                        }
-                    )
-            );
+            (a, b) => a.position - b.position).map(parameterData => parameterData.value)).then(
+                () => this.statement.execute().then(
+                    result => {
+                        this.statement.close();
+                        return result;
+                    },
+                    err => {
+                        this.statement.close();
+                        throw err;
+                    }
+                )
+        ).finally(() => {
+            this.connection.close();
+        });
     }
 }

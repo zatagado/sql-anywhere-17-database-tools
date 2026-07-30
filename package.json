@@ -8,7 +8,7 @@
         "url": "https://github.com/zatagado/sql-anywhere-17-database-tools.git"
     },
     "license": "MIT",
-    "version": "0.2.2",
+    "version": "0.3.0",
     "engines": {
         "vscode": "^1.105.0"
     },
@@ -18,6 +18,78 @@
     "activationEvents": [],
     "main": "./dist/extension.js",
     "contributes": {
+        "icons": {
+            "sqla-object-details": {
+                "description": "Object details",
+                "default": {
+                    "fontPath": "resources/sqla-icons.woff",
+                    "fontCharacter": "\\E001"
+                }
+            },
+            "sqla-virtual-document": {
+                "description": "Open virtual document",
+                "default": {
+                    "fontPath": "resources/sqla-icons.woff",
+                    "fontCharacter": "\\E002"
+                }
+            },
+            "sqla-execute": {
+                "description": "Execute SQL",
+                "default": {
+                    "fontPath": "resources/sqla-icons.woff",
+                    "fontCharacter": "\\E003"
+                }
+            },
+            "sqla-database": {
+                "description": "Database",
+                "default": {
+                    "fontPath": "resources/sqla-icons.woff",
+                    "fontCharacter": "\\E004"
+                }
+            },
+            "sqla-folder": {
+                "description": "Object type folder",
+                "default": {
+                    "fontPath": "resources/sqla-icons.woff",
+                    "fontCharacter": "\\E005"
+                }
+            },
+            "sqla-table": {
+                "description": "Table",
+                "default": {
+                    "fontPath": "resources/sqla-icons.woff",
+                    "fontCharacter": "\\E006"
+                }
+            },
+            "sqla-view": {
+                "description": "View",
+                "default": {
+                    "fontPath": "resources/sqla-icons.woff",
+                    "fontCharacter": "\\E007"
+                }
+            },
+            "sqla-procedure": {
+                "description": "Procedure",
+                "default": {
+                    "fontPath": "resources/sqla-icons.woff",
+                    "fontCharacter": "\\E008"
+                }
+            },
+            "sqla-refresh": {
+                "description": "Refresh",
+                "default": {
+                    "fontPath": "resources/sqla-icons.woff",
+                    "fontCharacter": "\\E009"
+                }
+            },
+            "sqla-result-set": {
+                "description": "Result set",
+                "default": {
+                    "fontPath": "resources/sqla-icons.woff",
+                    "fontCharacter": "\\E00A"
+                }
+            }
+        },
         "commands": [
             {
                 "command": "sql-anywhere-17-database-tools.datasource.addDatasource",
@@ -34,38 +106,71 @@
             {
                 "command": "_sql-anywhere-17-database-tools.databaseTree.refresh",
                 "title": "Refresh",
-                "icon": {
-                    "light": "resources/light/refresh.svg",
-                    "dark": "resources/dark/refresh.svg"
-                }
+                "icon": "$(sqla-refresh)"
             },
             {
                 "command": "_sql-anywhere-17-database-tools.databaseTree.select",
                 "title": "Select"
             },
             {
+                "command": "_sql-anywhere-17-database-tools.databaseTree.preview",
+                "title": "Preview"
+            },
+            {
+                "command": "_sql-anywhere-17-database-tools.databaseTree.details",
+                "title": "Details"
+            },
+            {
+                "command": "_sql-anywhere-17-database-tools.databaseTree.searchDatasource",
+                "title": "Search"
+            },
+            {
+                "command": "_sql-anywhere-17-database-tools.databaseTree.searchType",
+                "title": "Search"
+            },
+            {
                 "command": "sql-anywhere-17-database-tools.results.execute",
-                "title": "Tasks: Execute SQL",
-                "icon": {
-                    "light": "resources/light/execute.svg",
-                    "dark": "resources/dark/execute.svg"
-                }
+                "title": "Execute SQL",
+                "icon": "$(sqla-execute)"
             },
             {
                 "command": "sql-anywhere-17-database-tools.results.executeWithDatasource",
-                "title": "Tasks: Execute SQL with Datasource",
-                "icon": {
-                    "light": "resources/light/execute.svg",
-                    "dark": "resources/dark/execute.svg"
-                }
+                "title": "Execute SQL with Datasource",
+                "icon": "$(sqla-execute)"
+            },
+            {
+                "command": "sql-anywhere-17-database-tools.info.openDocumentDetails",
+                "title": "Show Object Details",
+                "icon": "$(sqla-object-details)"
+            },
+            {
+                "command": "sql-anywhere-17-database-tools.preview.openDetailsDocument",
+                "title": "Show Object Definition",
+                "icon": "$(sqla-virtual-document)"
+            },
+            {
+                "command": "sql-anywhere-17-database-tools.results.selectFromDetails",
+                "title": "Select From Object",
+                "shortTitle": "Select",
+                "icon": "$(sqla-result-set)"
+            },
+            {
+                "command": "sql-anywhere-17-database-tools.results.selectFromDocument",
+                "title": "Select From Object",
+                "shortTitle": "Select",
+                "icon": "$(sqla-result-set)"
             },
             {
                 "command": "_sql-anywhere-17-database-tools.results",
                 "title": "Open Results Webview"
             },
             {
-                "command": "_sql-anywhere-17-database-tools.preview.openVirtualDocument",
-                "title": "Open Virtual Document"
+                "command": "_sql-anywhere-17-database-tools.databaseTree.openObject",
+                "title": "Open Object"
+            },
+            {
+                "command": "_sql-anywhere-17-database-tools.info.details",
+                "title": "Open Details Webview"
             },
             {
                 "command": "sql-anywhere-17-database-tools.search",
@@ -75,6 +180,10 @@
             {
                 "command": "sql-anywhere-17-database-tools.newScratchSqlFile",
                 "title": "File: New Scratch SQL File..."
+            },
+            {
+                "command": "sql-anywhere-17-database-tools.results.executeExplorer",
+                "title": "Execute SQL"
             }
         ],
         "configuration": {
@@ -90,13 +199,61 @@
                     "type": "number",
                     "default": 10000,
                     "minimum": 1,
+                    "maximum": 250000,
                     "description": "Maximum number of rows to fetch per result set."
                 },
                 "sql-anywhere-17-database-tools.results.timeout": {
                     "type": "number",
-                    "default": 15,
+                    "default": 30,
                     "minimum": 1,
                     "description": "Maximum number of seconds to wait for a query before closing the connection."
+                },
+                "sql-anywhere-17-database-tools.results.nullPlaceholder": {
+                    "type": "string",
+                    "default": "(NULL)",
+                    "description": "Text displayed for null values in query results."
+                },
+                "sql-anywhere-17-database-tools.openAction.tables": {
+                    "type": "string",
+                    "enum": [
+                        "preview",
+                        "details"
+                    ],
+                    "enumItemLabels": [
+                        "Open Preview",
+                        "Open Details"
+                    ],
+                    "default": "preview",
+                    "order": 1,
+                    "description": "Which panel to show when a table is clicked in the database tree or opened from search."
+                },
+                "sql-anywhere-17-database-tools.openAction.views": {
+                    "type": "string",
+                    "enum": [
+                        "preview",
+                        "details"
+                    ],
+                    "enumItemLabels": [
+                        "Open Preview",
+                        "Open Details"
+                    ],
+                    "default": "preview",
+                    "order": 2,
+                    "description": "Which panel to show when a view is clicked in the database tree or opened from search."
+                },
+                "sql-anywhere-17-database-tools.openAction.procedures": {
+                    "type": "string",
+                    "enum": [
+                        "preview",
+                        "details"
+                    ],
+                    "enumItemLabels": [
+                        "Open Preview",
+                        "Open Details"
+                    ],
+                    "default": "preview",
+                    "order": 3,
+                    "description": "Which panel to show when a procedure is clicked in the database tree or opened from search."
                 }
             }
         },
@@ -115,7 +272,27 @@
                     "when": "false"
                 },
                 {
-                    "command": "_sql-anywhere-17-database-tools.preview.openVirtualDocument",
+                    "command": "_sql-anywhere-17-database-tools.databaseTree.preview",
+                    "when": "false"
+                },
+                {
+                    "command": "_sql-anywhere-17-database-tools.databaseTree.details",
+                    "when": "false"
+                },
+                {
+                    "command": "_sql-anywhere-17-database-tools.databaseTree.searchDatasource",
+                    "when": "false"
+                },
+                {
+                    "command": "_sql-anywhere-17-database-tools.databaseTree.searchType",
+                    "when": "false"
+                },
+                {
+                    "command": "_sql-anywhere-17-database-tools.databaseTree.openObject",
+                    "when": "false"
+                },
+                {
+                    "command": "_sql-anywhere-17-database-tools.info.details",
                     "when": "false"
                 },
                 {
@@ -129,6 +306,33 @@
                     "alt": "sql-anywhere-17-database-tools.results.executeWithDatasource",
                     "when": "editorLangId == sql && !editorReadonly",
                     "group": "navigation"
+                },
+                {
+                    "command": "sql-anywhere-17-database-tools.info.openDocumentDetails",
+                    "when": "resourceScheme == virtualTableSQL || resourceScheme == virtualViewSQL || resourceScheme == virtualProcedureSQL",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "sql-anywhere-17-database-tools.results.selectFromDocument",
+                    "when": "resourceScheme == virtualTableSQL || resourceScheme == virtualViewSQL",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "sql-anywhere-17-database-tools.preview.openDetailsDocument",
+                    "when": "activeWebviewPanelId == tableDetails || activeWebviewPanelId == viewDetails || activeWebviewPanelId == procedureDetails",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "sql-anywhere-17-database-tools.results.selectFromDetails",
+                    "when": "activeWebviewPanelId == tableDetails || activeWebviewPanelId == viewDetails",
+                    "group": "navigation@2"
+                }
+            ],
+            "explorer/context": [
+                {
+                    "command": "sql-anywhere-17-database-tools.results.executeExplorer",
+                    "when": "resourceLangId == sql",
+                    "group": "2_workspace"
                 }
             ],
             "view/title": [
@@ -152,9 +356,29 @@
                     "when": "(view == databaseTreeStandalone || view == databaseTreeExplorer) && viewItem == databaseItem"
                 },
                 {
+                    "command": "_sql-anywhere-17-database-tools.databaseTree.searchDatasource",
+                    "when": "(view == databaseTreeStandalone || view == databaseTreeExplorer) && viewItem == databaseItem",
+                    "group": "navigation"
+                },
+                {
+                    "command": "_sql-anywhere-17-database-tools.databaseTree.searchType",
+                    "when": "(view == databaseTreeStandalone || view == databaseTreeExplorer) && viewItem == typesItem",
+                    "group": "navigation"
+                },
+                {
                     "command": "_sql-anywhere-17-database-tools.databaseTree.select",
                     "when": "(view == databaseTreeStandalone || view == databaseTreeExplorer) && (viewItem == tableObjectItem || viewItem == viewObjectItem)",
-                    "group": "navigation"
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "_sql-anywhere-17-database-tools.databaseTree.preview",
+                    "when": "(view == databaseTreeStandalone || view == databaseTreeExplorer) && (viewItem == tableObjectItem || viewItem == viewObjectItem || viewItem == procedureObjectItem)",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "_sql-anywhere-17-database-tools.databaseTree.details",
+                    "when": "(view == databaseTreeStandalone || view == databaseTreeExplorer) && (viewItem == tableObjectItem || viewItem == viewObjectItem || viewItem == procedureObjectItem)",
+                    "group": "navigation@3"
                 }
             ]
         },
@@ -205,7 +429,8 @@
         "pretest": "yarn run compile-tests && yarn run compile && yarn run lint",
         "check-types": "tsc --noEmit",
         "lint": "eslint src",
-        "test": "vscode-test"
+        "test": "vscode-test",
+        "build:icons": "node scripts/build-icon-font.js"
     },
     "devDependencies": {
         "@types/mocha": "^10.0.10",
@@ -218,6 +443,9 @@
         "eslint": "^9.39.3",
         "node-gyp": "^12.2.0",
         "npm-run-all": "^4.1.5",
+        "svg2ttf": "^6.1.0",
+        "svgicons2svgfont": "^15.0.1",
+        "ttf2woff": "^3.0.0",
         "typescript": "^5.9.3",
         "typescript-eslint": "^8.56.1"
     },

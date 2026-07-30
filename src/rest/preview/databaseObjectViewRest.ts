@@ -3,6 +3,14 @@ import { Result } from 'odbc';
 import { SqlManager } from '../../manager/sqlManager';
 
 export class DatabaseObjectViewRest {
+    static async getTable(dataSource: DataSource, tableName: string): Promise<Result<unknown>> {
+        const tableQuery = SqlManager.getSqlQueries(dataSource.getType())!.preview.databaseObject.table;
+        return ConnectionManager.prepare(dataSource, tableQuery, false).then(preparedStatement => {
+            preparedStatement.bind('tableName', tableName);
+            return preparedStatement.execute();
+        });
+    }
+
     static async getView(dataSource: DataSource, viewName: string): Promise<Result<unknown>> {
         const viewQuery = SqlManager.getSqlQueries(dataSource.getType())!.preview.databaseObject.view;
         return ConnectionManager.prepare(dataSource, viewQuery, false).then(preparedStatement => {

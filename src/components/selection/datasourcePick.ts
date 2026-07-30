@@ -74,11 +74,11 @@ export async function selectDatasource(context: ExtensionContext): Promise<DataS
     }
     else if (await validateDatasource(dataSource)) {
         ConnectionManager.saveDataSource(dataSource);
-        window.setStatusBarMessage(`Connected to ${dataSource.getName()}`, 5000);
+        window.setStatusBarMessage(`Connected to datasource ${dataSource.getName()}`, 5000);
         return dataSource;
     }
     else {
-        window.showErrorMessage(`Failed to connect to ${dataSource.getName()}`);
+        window.showErrorMessage(`Failed to connect to datasource ${dataSource.getName()}.`);
         return null;
     }
 }

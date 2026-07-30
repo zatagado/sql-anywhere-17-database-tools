@@ -34,6 +34,21 @@ export interface Sql {
     results: {
         selectFromObject: string;
     };
+    details: {
+        table: {
+            columns: string;
+            constraints: string;
+            referencingConstraints: string;
+            privileges: string;
+        };
+        view: {
+            columns: string;
+            privileges: string;
+        };
+        procedure: {
+            privileges: string;
+        };
+    };
 }
 
 export class SqlManager {
