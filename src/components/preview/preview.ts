@@ -92,7 +92,10 @@ async function documentForDetailsView(): Promise<void> {
     }
 
     // The panel title is `${dataSource.getName()} - ${objectName}`.
-    const [databaseName, objectName] = activeTab!.label.split(' - ');
+    const separatorChars = ' - ';
+    const separatorIndex = activeTab!.label.lastIndexOf(separatorChars);
+    const databaseName = activeTab!.label.substring(0, separatorIndex);
+    const objectName = activeTab!.label.substring(separatorIndex + separatorChars.length);
 
     const dataSource = ConnectionManager.getDataSource(databaseName);
     if (!dataSource) {
@@ -110,9 +113,9 @@ export function activate(): Disposable[] {
         onDidChange = this._onDidChangeEmitter.event;
 
         async provideTextDocumentContent(uri: Uri): Promise<string> {
-            const parts = uri.path.split('/');
-            const databaseName = parts[0];
-            const tableName = parts[1].substring(0, parts[1].length - 4);
+            const separatorIndex = uri.path.lastIndexOf('/');
+            const databaseName = uri.path.substring(0, separatorIndex);
+            const tableName = uri.path.substring(separatorIndex + 1, uri.path.length - 4);
             const tableRow = (await DatabaseObjectViewRest.getTable(
                 ConnectionManager.getDataSource(databaseName)!, tableName))[0] as unknown[];
             return tableRow[0] as string;
@@ -126,12 +129,9 @@ export function activate(): Disposable[] {
         onDidChange = this._onDidChangeEmitter.event;
 
         async provideTextDocumentContent(uri: Uri): Promise<string> {
-            // Example uri: virtualViewSQL:databaseName/viewName.sql
-            const parts = uri.path.split('/');
-            // Get the database name
-            const databaseName = parts[0];
-            // Get the view name without the .sql extension
-            const viewName = parts[1].substring(0, parts[1].length - 4);
+            const separatorIndex = uri.path.lastIndexOf('/');
+            const databaseName = uri.path.substring(0, separatorIndex);
+            const viewName = uri.path.substring(separatorIndex + 1, uri.path.length - 4);
             return DatabaseObjectViewRest.getView(ConnectionManager.getDataSource(databaseName)!, viewName).then(
                 result => (result[0] as unknown[])[0] as string);
         }
@@ -144,9 +144,9 @@ export function activate(): Disposable[] {
         onDidChange = this._onDidChangeEmitter.event;
 
         async provideTextDocumentContent(uri: Uri): Promise<string> {
-            const parts = uri.path.split('/');
-            const databaseName = parts[0];
-            const procedureName = parts[1].substring(0, parts[1].length - 4);
+            const separatorIndex = uri.path.lastIndexOf('/');
+            const databaseName = uri.path.substring(0, separatorIndex);
+            const procedureName = uri.path.substring(separatorIndex + 1, uri.path.length - 4);
             const procedureRow = (await DatabaseObjectViewRest.getProcedure(
                 ConnectionManager.getDataSource(databaseName)!, procedureName))[0] as unknown[];
             return procedureRow[0] as string;

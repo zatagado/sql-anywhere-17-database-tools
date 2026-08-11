@@ -219,9 +219,9 @@ export function activate(context: ExtensionContext): Disposable[] {
             return;
         }
 
-        const parts = uri.path.split('/');
-        const databaseName = parts[0];
-        const objectName = parts[1].substring(0, parts[1].length - 4);
+        const separatorIndex = uri.path.lastIndexOf('/');
+        const databaseName = uri.path.substring(0, separatorIndex);
+        const objectName = uri.path.substring(separatorIndex + 1, uri.path.length - 4);
         const dataSource = ConnectionManager.getDataSource(databaseName);
         if (!dataSource) {
             return;
