@@ -1,4 +1,21 @@
+import type { ColumnDefinition, Result } from 'odbc';
+
 export type ResultRow = (string | number | boolean | null)[];
+
+export type QueryResultDetails = {
+    columns: ColumnDefinition[];
+    count: number;
+    statement: string;
+    return: number;
+    parameters: Array<number | string>;
+    nullPlaceholder: string;
+    truncated: boolean;
+};
+
+export type QueryResult = Result<unknown> & {
+    nullPlaceholder: string;
+    truncated?: boolean;
+};
 
 export type Column = {
     dataType: number;
@@ -92,4 +109,77 @@ export function formatSqlDataType(column: Column): string {
     }
 
     return type;
+}
+
+type Message = {
+    type: string;
+    columns?: unknown;
+    count?: number;
+    rows?: unknown[];
+    startIndex?: number;
+    message?: string;
+    statement?: string;
+    return?: number;
+    parameters?: Array<number | string>;
+    nullPlaceholder?: string;
+    truncated?: boolean;
+};
+
+export function handleMessageType(
+    message: Message,
+    isLoading: { value: boolean },
+    error: { value: string | undefined },
+    details: { value: QueryResultDetails | undefined },
+    rows: { value: unknown[] | undefined },
+    rowsCount: { value: number },
+    data: { value: QueryResult | undefined }
+): void {
+    switch (message.type) {
+        case 'onLoading': {
+            isLoading.value = true;
+            error.value = undefined;
+            details.value = undefined;
+            rows.value = undefined;
+            rowsCount.value = 0;
+            data.value = undefined;
+            break;
+        }
+        case 'onResultDetails': {
+            details.value = {
+                columns: message.columns as ColumnDefinition[],
+                count: message.count ?? 0,
+                statement: message.statement ?? '',
+                return: message.return ?? 0,
+                parameters: message.parameters ?? [],
+                nullPlaceholder: message.nullPlaceholder ?? '(NULL)',
+                truncated: message.truncated ?? false
+            };
+            break;
+        }
+        case 'onResultRows': {
+            if (!rows.value) {
+                rows.value = new Array<unknown>(message.count);
+            }
+
+            if (message.rows && message.startIndex !== undefined) {
+                for (let i = 0; i < message.rows.length; i++) {
+                    rows.value[message.startIndex + i] = message.rows[i];
+                }
+                rowsCount.value += message.rows.length;
+            }
+
+            if (rowsCount.value === message.count && details.value) {
+                data.value = Object.assign(rows.value, details.value) as QueryResult;
+                isLoading.value = false;
+                error.value = undefined;
+            }
+            break;
+        }
+        case 'onError': {
+            isLoading.value = false;
+            data.value = undefined;
+            error.value = message.message as string;
+            break;
+        }
+    }
 }

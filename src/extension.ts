@@ -1,8 +1,9 @@
 import * as databaseTree from './components/navigation/databaseTree';
 import * as datasourcePick from './components/selection/datasourcePick';
-import * as databaseObject from './components/preview/object';
+import * as databaseObject from './components/preview/preview';
+import * as details from './components/details/details';
 import * as results from './components/results/results';
-import * as scratch from './components/results/scratch';
+import * as scratch from './components/scratch/scratch';
 import * as searchPick from './components/search/searchPick';
 import * as connectionManager from './manager/connectionManager';
 import * as sqlManager from './manager/sqlManager';
@@ -29,6 +30,7 @@ export function activate(context: vscode.ExtensionContext) {
             () => datasourcePick.removeDatasource(context)),
         ...databaseObject.activate(),
         ...databaseTree.activate(),
+        ...details.activate(context),
         ...results.activate(context),
         ...scratch.activate(context),
         ...searchPick.activate(context),

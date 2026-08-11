@@ -1,6 +1,6 @@
 import { ConnectionManager, DataSource } from '../../manager/connectionManager';
 import { DatabaseObjectType } from '../../manager/sqlManager';
-import { openDatabaseObject } from '../preview/object';
+import { openObject } from '../../shared/openObject';
 import { SearchPickRest } from '../../rest/search/searchPickRest';
 import {
     QuickPickItem,
@@ -12,6 +12,7 @@ import {
     ProgressLocation,
     window
 } from 'vscode';
+import { Result } from 'odbc';
 
 export type SearchPickResult = {
     dataSource: DataSource;
@@ -24,12 +25,33 @@ interface SearchObjectItem extends QuickPickItem {
     objectName: string;
 }
 
-async function loadObjectItems(dataSource: DataSource): Promise<SearchObjectItem[]> {
-    const [tablesResult, viewsResult, proceduresResult] = await Promise.all([
+function loadTypeObjectItems(dataSource: DataSource, type: DatabaseObjectType): Promise<SearchObjectItem[]> {
+    switch (type) {
+        case DatabaseObjectType.Table: {
+            return SearchPickRest.getTables(dataSource).then(tablesResult => loadObjectItems(tablesResult, [], []));
+        }
+        case DatabaseObjectType.View: {
+            return SearchPickRest.getViews(dataSource).then(viewsResult => loadObjectItems([], viewsResult, []));
+        }
+        case DatabaseObjectType.Procedure: {
+            return SearchPickRest.getProcedures(dataSource).then(proceduresResult => loadObjectItems([], [], proceduresResult));
+        }
+    }
+}
+
+function loadAllObjectItems(dataSource: DataSource): Promise<SearchObjectItem[]> {
+    return Promise.all([
         SearchPickRest.getTables(dataSource),
         SearchPickRest.getViews(dataSource),
         SearchPickRest.getProcedures(dataSource)
-    ]);
+    ]).then(results => {
+        const [tablesResult, viewsResult, proceduresResult] = results;
+        return loadObjectItems(tablesResult, viewsResult, proceduresResult);  
+    });
+}
+
+async function loadObjectItems(tablesResult: Result<unknown> | [],
+    viewsResult: Result<unknown> | [], proceduresResult: Result<unknown> | []): Promise<SearchObjectItem[]> {
 
     const items: SearchObjectItem[] = [];
 
@@ -73,7 +95,8 @@ async function loadObjectItems(dataSource: DataSource): Promise<SearchObjectItem
     return items;
 }
 
-export async function pickSearchObject(_context: ExtensionContext): Promise<SearchPickResult | null> {
+export async function pickSearchObject(_context: ExtensionContext, dataSource: DataSource | undefined,
+    type: DatabaseObjectType | undefined): Promise<SearchPickResult | null> {
     const title = 'Search objects';
 
     interface State {
@@ -82,9 +105,13 @@ export async function pickSearchObject(_context: ExtensionContext): Promise<Sear
         name?: string;
     }
 
-    async function collectInputs() {
-        const state: State = {};
-        await SearchQuickPick.run(input => selectDatasource(input, state));
+    async function collectInputs(state: State) {
+        if (dataSource) {
+            await SearchQuickPick.run(input => selectObject(input, state));
+        }
+        else {
+            await SearchQuickPick.run(input => selectDatasource(input, state));
+        }
         return state;
     }
 
@@ -94,7 +121,7 @@ export async function pickSearchObject(_context: ExtensionContext): Promise<Sear
             placeholder: 'Select a datasource',
             items: ConnectionManager.getDataSources().map(dataSource => ({ label: dataSource.getName() }))
         });
-        const dataSource = ConnectionManager.getDataSource(selection.label);
+        const dataSource = ConnectionManager.getDataSource(selection.label, true);
         if (dataSource) {
             state.dataSource = dataSource;
             return (inputNext: SearchQuickPick) => selectObject(inputNext, state);
@@ -103,16 +130,29 @@ export async function pickSearchObject(_context: ExtensionContext): Promise<Sear
 
     async function selectObject(input: SearchQuickPick, state: State) {
         const dataSource = state.dataSource!;
-        const objectItems = await loadObjectItems(dataSource);
+        let objectItems;
+        try {
+            if (state.type) {
+                objectItems = await loadTypeObjectItems(dataSource, state.type!);
+            }
+            else {
+                objectItems = await loadAllObjectItems(dataSource);
+            }
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            window.showErrorMessage(message);
+            return;
+        }
 
         if (objectItems.length === 0) {
-            window.showWarningMessage('No tables, views, or procedures were returned for this datasource.');
+            window.showWarningMessage(`No tables, views, or procedures were returned for datasource ${dataSource.getName()}.`);
             return;
         }
 
         const selection: SearchObjectItem = await input.showQuickPick({
-            title: `Search — ${dataSource.getName()}`,
-            placeholder: 'Select a database object...',
+            title: `Search ${state.type ? state.type + ' ' : ''}– ${dataSource.getName()}`,
+            placeholder: `Select a database ${state.type ? state.type.toLowerCase().replace(/s$/, '') : 'object'}...`,
             items: objectItems
         });
 
@@ -125,7 +165,7 @@ export async function pickSearchObject(_context: ExtensionContext): Promise<Sear
         return null;
     }
 
-    const state = await collectInputs();
+    const state = await collectInputs({ dataSource: dataSource, type: type });
     if (state.dataSource === undefined || state.type === undefined || state.name === undefined) {
         return null;
     }
@@ -139,10 +179,10 @@ export async function pickSearchObject(_context: ExtensionContext): Promise<Sear
 
 export function activate(context: ExtensionContext): Disposable[] {
     return [
-        commands.registerCommand('sql-anywhere-17-database-tools.search', async () => {
-            const result = await pickSearchObject(context);
+        commands.registerCommand('sql-anywhere-17-database-tools.search', async (dataSource?, type?) => {
+            const result = await pickSearchObject(context, dataSource, type);
             if (result) {
-                await openDatabaseObject(result.dataSource, result.type, result.name);
+                await openObject(result.dataSource, result.type, result.name);
             }
         })
     ];

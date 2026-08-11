@@ -1,7 +1,9 @@
 import { ConnectionManager, DataSource } from '../../manager/connectionManager';
 import { DatabaseObjectType } from '../../manager/sqlManager';
-import { openDatabaseObject } from '../preview/object';
+import { openObject } from '../../shared/openObject';
 import { DatabaseTreeRest } from '../../rest/navigation/databaseTreeRest';
+import { openObjectDetails } from '../details/details';
+import { openDatabaseObject } from '../preview/preview';
 import { selectObject } from '../results/results';
 import {
     Command,
@@ -10,10 +12,10 @@ import {
     Event,
     EventEmitter,
     ExtensionContext,
+    ThemeIcon,
     TreeDataProvider,
     TreeItem,
     TreeItemCollapsibleState,
-    Uri,
 } from 'vscode';
 
 export class DatabaseTree implements TreeDataProvider<DatabaseTreeItem> {
@@ -105,10 +107,7 @@ export class DatabaseItem extends DatabaseTreeItem {
         super(label, collapsibleState);
 
         this.dataSource = dataSource;
-        this.iconPath = {
-            light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'database.svg'),
-            dark: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'dark', 'database.svg'),
-        };
+        this.iconPath = new ThemeIcon('sqla-database');
     }
 
     getChildren(): Promise<TypesItem[]> {
@@ -116,28 +115,19 @@ export class DatabaseItem extends DatabaseTreeItem {
             new TypesItem(
                 DatabaseObjectType.Table,
                 TreeItemCollapsibleState.Collapsed,
-                {
-                    light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'folder.svg'),
-                    dark: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'dark', 'folder.svg'),
-                },
+                new ThemeIcon('sqla-folder'),
                 this,
             ),
             new TypesItem(
                 DatabaseObjectType.View,
                 TreeItemCollapsibleState.Collapsed,
-                {
-                    light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'folder.svg'),
-                    dark: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'dark', 'folder.svg'),
-                },
+                new ThemeIcon('sqla-folder'),
                 this,
             ),
             new TypesItem(
                 DatabaseObjectType.Procedure,
                 TreeItemCollapsibleState.Collapsed,
-                {
-                    light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'folder.svg'),
-                    dark: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'dark', 'folder.svg'),
-                },
+                new ThemeIcon('sqla-folder'),
                 this,
             )
         ]);
@@ -154,7 +144,7 @@ export class TypesItem extends DatabaseTreeItem {
     constructor(
         type: DatabaseObjectType,
         collapsibleState: TreeItemCollapsibleState,
-        iconPath: { light: Uri; dark: Uri },
+        iconPath: ThemeIcon,
         parentNode: DatabaseItem,
     ) {
         super(type, collapsibleState);
@@ -173,13 +163,10 @@ export class TypesItem extends DatabaseTreeItem {
                     return new ObjectItem(
                         tableName,
                         TreeItemCollapsibleState.None,
-                        {
-                            light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'table.svg'),
-                            dark: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'dark', 'table.svg'),
-                        },
+                        new ThemeIcon('sqla-table'),
                         this,
                         {
-                            command: '_sql-anywhere-17-database-tools.preview.openVirtualDocument',
+                            command: '_sql-anywhere-17-database-tools.databaseTree.openObject',
                             title: ''
                         }
                     );
@@ -192,13 +179,10 @@ export class TypesItem extends DatabaseTreeItem {
                     return new ObjectItem(
                         viewName,
                         TreeItemCollapsibleState.None,
-                        {
-                            light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'view.svg'),
-                            dark: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'dark', 'view.svg'),
-                        },
+                        new ThemeIcon('sqla-view'),
                         this,
                         {
-                            command: '_sql-anywhere-17-database-tools.preview.openVirtualDocument',
+                            command: '_sql-anywhere-17-database-tools.databaseTree.openObject',
                             title: ''
                         }
                     );
@@ -211,13 +195,10 @@ export class TypesItem extends DatabaseTreeItem {
                     return new ObjectItem(
                         procedureName,
                         TreeItemCollapsibleState.None,
-                        {
-                            light: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'light', 'procedure.svg'),
-                            dark: Uri.joinPath(DatabaseTree.context.extensionUri, 'resources', 'dark', 'procedure.svg'),
-                        },
+                        new ThemeIcon('sqla-procedure'),
                         this,
                         {
-                            command: '_sql-anywhere-17-database-tools.preview.openVirtualDocument',
+                            command: '_sql-anywhere-17-database-tools.databaseTree.openObject',
                             title: ''
                         }
                     );
@@ -225,6 +206,8 @@ export class TypesItem extends DatabaseTreeItem {
             }
         }
     }
+
+    contextValue = 'typesItem';
 }
 
 export class ObjectItem extends DatabaseTreeItem {
@@ -234,7 +217,7 @@ export class ObjectItem extends DatabaseTreeItem {
     constructor(
         label: string,
         collapsibleState: TreeItemCollapsibleState,
-        iconPath: { light: Uri, dark: Uri },
+        iconPath: ThemeIcon,
         parentNode: TypesItem,
         public readonly command?: Command
     ) {
@@ -246,6 +229,9 @@ export class ObjectItem extends DatabaseTreeItem {
         }
         else if (parentNode.type === DatabaseObjectType.View) {
             this.contextValue = 'viewObjectItem';
+        }
+        else if (parentNode.type === DatabaseObjectType.Procedure) {
+            this.contextValue = 'procedureObjectItem';
         }
         if (this.command) {
             this.command.arguments = [this];
@@ -263,9 +249,19 @@ export class ObjectItem extends DatabaseTreeItem {
 
 export function activate(): Disposable[] {
     return [
-        commands.registerCommand('_sql-anywhere-17-database-tools.preview.openVirtualDocument', (node: ObjectItem) =>
-            openDatabaseObject(node.getDataSource(), node.getType(), node.label as string)),
+        commands.registerCommand('_sql-anywhere-17-database-tools.databaseTree.searchDatasource', (node: DatabaseItem) =>
+            commands.executeCommand('sql-anywhere-17-database-tools.search',
+                ConnectionManager.getDataSource(node.label as string))),
+        commands.registerCommand('_sql-anywhere-17-database-tools.databaseTree.searchType', (node: TypesItem) =>
+            commands.executeCommand('sql-anywhere-17-database-tools.search',
+                ConnectionManager.getDataSource(node.parentNode.label as string), node.type)),
+        commands.registerCommand('_sql-anywhere-17-database-tools.databaseTree.openObject', (node: ObjectItem) =>
+            openObject(node.getDataSource(), node.getType(), node.label as string)),
         commands.registerCommand('_sql-anywhere-17-database-tools.databaseTree.select',
-            (node: ObjectItem) => selectObject(node.getDataSource(), node.label as string))
+            (node: ObjectItem) => selectObject(node.getDataSource(), node.label as string)),
+        commands.registerCommand('_sql-anywhere-17-database-tools.databaseTree.preview', (node: ObjectItem) =>
+            openDatabaseObject(node.getDataSource(), node.getType(), node.label as string)),
+        commands.registerCommand('_sql-anywhere-17-database-tools.databaseTree.details', (node: ObjectItem) =>
+            openObjectDetails(node.getDataSource(), node.getType(), node.label as string))
     ];
 }

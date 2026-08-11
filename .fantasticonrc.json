@@ -1,0 +1,12 @@
+{
+    "inputDir": "resources/icon-font-src",
+    "outputDir": "resources",
+    "name": "sqla-icons",
+    "fontTypes": ["woff"],
+    "assetTypes": ["json"],
+    "normalize": true,
+    "codepoints": {
+        "sqla-object-details": 57345,
+        "sqla-virtual-document": 57346
+    }
+}
