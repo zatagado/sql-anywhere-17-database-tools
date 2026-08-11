@@ -451,7 +451,10 @@ export function activate(context: ExtensionContext): Disposable[] {
         }
 
         // The panel title is `${dataSource.getName()} - ${objectName}`.
-        const [databaseName, objectName] = activeTab!.label.split(' - ');
+        const separatorChars = ' - ';
+        const separatorIndex = activeTab!.label.lastIndexOf(separatorChars);
+        const databaseName = activeTab!.label.substring(0, separatorIndex);
+        const objectName = activeTab!.label.substring(separatorIndex + separatorChars.length);
 
         const dataSource = ConnectionManager.getDataSource(databaseName);
         if (!dataSource) {
@@ -472,10 +475,9 @@ export function activate(context: ExtensionContext): Disposable[] {
             return;
         }
 
-        // Example uri: virtualTableSQL:databaseName/objectName.sql
-        const parts = uri.path.split('/');
-        const databaseName = parts[0];
-        const objectName = parts[1].substring(0, parts[1].length - 4);
+        const separatorIndex = uri.path.lastIndexOf('/');
+        const databaseName = uri.path.substring(0, separatorIndex);
+        const objectName = uri.path.substring(separatorIndex + 1, uri.path.length - 4);
 
         const dataSource = ConnectionManager.getDataSource(databaseName);
         if (!dataSource) {
