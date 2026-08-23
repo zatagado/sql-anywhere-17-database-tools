@@ -11,6 +11,6 @@ declare global {
   interface Window {
     __vscodeApi__?: VsCodeApi
     /** Set by extension HTML before the Vue bundle loads; selects which root view to mount. */
-    __VSCODE_WEBVIEW_VIEW__?: 'objectDetails' | 'queryResults'
+    __VSCODE_WEBVIEW_VIEW__?: 'databaseSearch' | 'objectDetails' | 'queryResults'
   }
 }

@@ -5,6 +5,7 @@ import * as details from './components/details/details';
 import * as results from './components/results/results';
 import * as scratch from './components/scratch/scratch';
 import * as searchPick from './components/search/searchPick';
+import { DatabaseSearchViewProvider } from './components/search/databaseSearchTree';
 import * as connectionManager from './manager/connectionManager';
 import * as sqlManager from './manager/sqlManager';
 import * as vscode from 'vscode';
@@ -14,9 +15,11 @@ export function activate(context: vscode.ExtensionContext) {
     connectionManager.ConnectionManager.activate(context);
 
     const databaseTreeProvider = new databaseTree.DatabaseTree(context);
+    const databaseSearchViewProvider = new DatabaseSearchViewProvider(context);
     context.subscriptions.push(
         vscode.window.registerTreeDataProvider('databaseTreeStandalone', databaseTreeProvider),
         vscode.window.registerTreeDataProvider('databaseTreeExplorer', databaseTreeProvider),
+        vscode.window.registerWebviewViewProvider('databaseSearchTree', databaseSearchViewProvider),
         vscode.commands.registerCommand('sql-anywhere-17-database-tools.datasource.addDatasource',
             () => datasourcePick.selectDatasource(context).then(dataSource => {
                 if (dataSource) {

@@ -1,7 +1,7 @@
 import {
     Uri
 } from "vscode";
-import { WebviewPanel } from "vscode";
+import { WebviewPanel, WebviewView } from "vscode";
 
 export enum DatabaseObjectType {
     Table = 'Tables',
@@ -9,10 +9,10 @@ export enum DatabaseObjectType {
     Procedure = 'Procedures',
 }
 
-export function getWebviewHtml(panel: WebviewPanel, extensionUri: Uri, name: string): string {
-    const scriptSrc = panel.webview.asWebviewUri(Uri.joinPath(extensionUri, 'web', 'dist', 'assets', 'index.js'));
-    const cssSrc = panel.webview.asWebviewUri(Uri.joinPath(extensionUri, 'web', 'dist', 'assets', 'index.css'));
-    const loadingSvg = panel.webview.asWebviewUri(Uri.joinPath(extensionUri, 'web', 'resources', 'loading.svg'));
+export function getWebviewHtml(host: WebviewPanel | WebviewView, extensionUri: Uri, name: string): string {
+    const scriptSrc = host.webview.asWebviewUri(Uri.joinPath(extensionUri, 'web', 'dist', 'assets', 'index.js'));
+    const cssSrc = host.webview.asWebviewUri(Uri.joinPath(extensionUri, 'web', 'dist', 'assets', 'index.css'));
+    const loadingSvg = host.webview.asWebviewUri(Uri.joinPath(extensionUri, 'web', 'resources', 'loading.svg'));
 
     return `
         <!DOCTYPE html>

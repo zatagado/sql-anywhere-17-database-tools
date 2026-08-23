@@ -178,6 +178,12 @@
                 "shortTitle": "Search Datasource"
             },
             {
+                "command": "_sql-anywhere-17-database-tools.databaseSearch.selectDatasource",
+                "title": "Select Datasource",
+                "icon": "$(database)",
+                "enablement": "false"
+            },
+            {
                 "command": "sql-anywhere-17-database-tools.newScratchSqlFile",
                 "title": "File: New Scratch SQL File..."
             },
@@ -298,6 +304,10 @@
                 {
                     "command": "_sql-anywhere-17-database-tools.results",
                     "when": "false"
+                },
+                {
+                    "command": "_sql-anywhere-17-database-tools.databaseSearch.selectDatasource",
+                    "when": "false"
                 }
             ],
             "editor/title": [
@@ -348,6 +358,11 @@
                     "command": "_sql-anywhere-17-database-tools.databaseTree.refresh",
                     "when": "view == databaseTreeStandalone || view == databaseTreeExplorer",
                     "group": "navigation"
+                },
+                {
+                    "command": "_sql-anywhere-17-database-tools.databaseSearch.selectDatasource",
+                    "when": "view == databaseSearchTree",
+                    "group": "navigation"
                 }
             ],
             "view/item/context": [
@@ -391,6 +406,15 @@
                     "contextualTitle": "Datasources"
                 }
             ],
+            "database-tools-search": [
+                {
+                    "id": "databaseSearchTree",
+                    "name": "Search",
+                    "type": "webview",
+                    "icon": "$(search)",
+                    "contextualTitle": "Search"
+                }
+            ],
             "explorer": [
                 {
                     "id": "databaseTreeExplorer",
@@ -404,6 +428,11 @@
                     "id": "database-tools",
                     "title": "Database Tools",
                     "icon": "$(database)"
+                },
+                {
+                    "id": "database-tools-search",
+                    "title": "Database Tools",
+                    "icon": "$(search)"
                 }
             ]
         },
